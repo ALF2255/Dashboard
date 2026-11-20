@@ -2,7 +2,7 @@
 
 Live-Dashboard für Bitcoin (und ETH, ZEC, Gold, Silber) mit Chart, Analyse, Zonen, Papier-Depot und einem Auto-Trader zum **Testen** von Handelsstrategien. Alles läuft als eine einzige HTML-Datei direkt im Browser.
 
-**Live:** `index.html` (über GitHub Pages) ist immer die aktuelle Version.
+**Live:** https://alf2255.github.io/Dashboard/
 
 > ⚠️ Nur Papier-Handel. Kein echtes Geld, keine Anlageberatung. Ergebnisse aus Backtests sind keine Garantie für die Zukunft.
 
@@ -36,13 +36,15 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-| Version | Datei | Neu |
-|---|---|---|
-| v3 | `versionen/btc-live-dashboard_v3.html` | Gebühren/Slippage im Backtest, strenge Edge-Prüfung, Handelssperre, Kostenfilter |
-| v3.1 | `versionen/btc-live-dashboard_v3.1.html` | Marktphasen-Filter, Versionsanzeige |
-| v3.2 | `versionen/btc-live-dashboard_v3.2.html` | Lange Historie (4h ≈ 2 Jahre, 1d ab 2015), Strategie Struktur-Bruch (BOS/CHoCH), Zonen-Invalidierung, Regenbogen, Rückfrage beim Instrumentwechsel |
-| v3.3 | `versionen/btc-live-dashboard_v3.3.html` | Funding Rate als getestete Strategie „Funding-Extrem“, Karte Derivate-Stimmung (Funding + Open Interest) |
-| v3.4 | `versionen/btc-live-dashboard_v3.4.html` = `index.html` | Synchronisierung zwischen Geräten über ein geheimes GitHub-Gist (ein Hauptgerät handelt, andere sehen zu) |
+`index.html` ist immer die aktuelle Version (derzeit **v3.4**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+
+| Version | Neu |
+|---|---|
+| v3 | Gebühren/Slippage im Backtest, strenge Edge-Prüfung, Handelssperre, Kostenfilter |
+| v3.1 | Marktphasen-Filter, Versionsanzeige |
+| v3.2 | Lange Historie (4h ≈ 2 Jahre, 1d ab 2015), Strategie Struktur-Bruch (BOS/CHoCH), Zonen-Invalidierung, Regenbogen, Rückfrage beim Instrumentwechsel |
+| v3.3 | Funding Rate als getestete Strategie „Funding-Extrem“, Karte Derivate-Stimmung (Funding + Open Interest) |
+| v3.4 | Synchronisierung zwischen Geräten über ein geheimes GitHub-Gist (ein Hauptgerät handelt, andere sehen zu) |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.4 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.4.1 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -338,7 +338,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.4';
+const VERSION='v3.4.1';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -836,6 +836,15 @@ let SY=(()=>{try{return JSON.parse(localStorage.getItem(SY_K))||{}}catch(e){retu
 if(!SY.dev)SY.dev={id:Math.random().toString(36).slice(2,10),name:''};SY.role=SY.role||'off';
 const sySave=()=>{try{localStorage.setItem(SY_K,JSON.stringify(SY))}catch(e){}};sySave();
 const syView=()=>SY.role==='view'&&!!SY.tok,syMainOn=()=>SY.role==='main'&&!!SY.tok;
+// v3.4.1: Nur EIN Tab je Browser darf handeln/synchronisieren. Weitere Tabs desselben Browsers teilen sich den Speicher
+// (und die Geräte-ID) und würden sich sonst gegenseitig die Rolle wegnehmen → sie werden reine Anzeige.
+const TAB_ID=Math.random().toString(36).slice(2,10);let tabSecondary=false;
+function tabBeat(){try{const o=JSON.parse(localStorage.getItem('tab_owner')||'null'),now=Date.now();
+  if(!o||o.id===TAB_ID||now-o.t>15000){localStorage.setItem('tab_owner',JSON.stringify({id:TAB_ID,t:now}));if(tabSecondary){tabSecondary=false;SY=(()=>{try{return JSON.parse(localStorage.getItem(SY_K))||SY}catch(e){return SY}})();syRender()}}
+  else{if(!tabSecondary){tabSecondary=true;syRender()}reloadState()}}catch(e){}}
+tabBeat();setInterval(tabBeat,5000);
+addEventListener('beforeunload',()=>{try{const o=JSON.parse(localStorage.getItem('tab_owner')||'null');if(o&&o.id===TAB_ID)localStorage.removeItem('tab_owner')}catch(e){}});
+const roOnly=()=>syView()||tabSecondary;
 let syBusy=false,syMsg='';
 async function gh(path,opt={}){
   const r=await fetch('https://api.github.com'+path,{...opt,headers:{Authorization:'Bearer '+SY.tok,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}});
@@ -871,13 +880,21 @@ async function syPush(force){
   if(!force&&hsh===SY.hash)return false;
   const body=await syPack({v:1,dashboard:VERSION,at:Date.now(),dev:SY.dev,pair,bot:!!(acct.bot&&acct.bot.on),keys});
   const g=await gh('/gists/'+SY.gist,{method:'PATCH',body:JSON.stringify({files:{[SY_FILE]:{content:body}}})});
-  SY.ver=g.history&&g.history[0]&&g.history[0].version;SY.hash=hsh;SY.lastPush=Date.now();SY.mainName=SY.dev.name;SY.mainAt=Date.now();sySave();return true;
+  SY.ver=g.history&&g.history[0]&&g.history[0].version;SY.hash=hsh;SY.lastPush=Date.now();SY.mainName=SY.dev.name;SY.mainId=SY.dev.id;SY.mainAt=Date.now();sySave();return true;
 }
 async function syApply(d){
   if(!d||!d.keys)return false;const ks=Object.keys(d.keys);
   if(!ks.length||ks.some(k=>!/^btc[a-z]*$/.test(k)||typeof d.keys[k]!=='string'))throw new Error('Gist enthält ungültige Daten');
   bkKeys().forEach(n=>localStorage.removeItem(n));ks.forEach(k=>localStorage.setItem(k,d.keys[k]));
-  // Zustand im Speicher neu einlesen (ohne Seiten-Neustart)
+  reloadState();
+  SY.mainName=d.dev&&d.dev.name||'?';SY.mainId=d.dev&&d.dev.id;SY.mainAt=d.at;SY.mainBot=d.bot;SY.lastPull=Date.now();SY.hash=sha256(JSON.stringify(syCollect())).slice(0,16);sySave();
+  botKey='';botLv=null;
+  if(d.pair&&d.pair!==pair&&INSTR[d.pair]&&d.pair!==SY.mainPair){ // Hauptgerät hat das Instrument gewechselt → hier mitziehen (ohne Konto-Reset)
+    SY.mainPair=d.pair;sySave();pair=d.pair;$('pair').value=pair;fx=null;fxAt=0;metalSrc='bn';Object.keys(stratData).forEach(k=>delete stratData[k]);btCache={};lastPlan=null;last=null;await init();
+  }else{SY.mainPair=d.pair;sySave()}
+  return true;
+}
+function reloadState(){ // Zustand aus dem Browserspeicher neu einlesen (ohne Seiten-Neustart)
   try{acct=JSON.parse(localStorage.getItem(KEY)||'null')||freshAcct()}catch(_){acct=freshAcct()}
   acct.cfg=acct.cfg||{inv:1000,tgt:500,mxl:500};acct.bot=acct.bot||newBot();acct.orders=acct.orders||[];acct.eqHist=acct.eqHist||[];acct.lots=acct.lots||[];
   try{const r=JSON.parse(localStorage.getItem(JKEY));J=r&&r.rows?r:{rows:[]}}catch(_){J={rows:[]}}jDirty=true;
@@ -885,15 +902,9 @@ async function syApply(d){
   try{const r=JSON.parse(localStorage.getItem(DKEY)||'null');if(r)DP=r}catch(_){}
   try{const r=JSON.parse(localStorage.getItem(FCK));if(r&&Array.isArray(r.recs))FC=r}catch(_){}
   try{const r=JSON.parse(localStorage.getItem(MKK));if(r&&typeof r==='object')MK=r}catch(_){}
-  SY.mainName=d.dev&&d.dev.name||'?';SY.mainAt=d.at;SY.mainBot=d.bot;SY.lastPull=Date.now();SY.hash=sha256(JSON.stringify(syCollect())).slice(0,16);sySave();
-  botKey='';botLv=null;
-  if(d.pair&&d.pair!==pair&&INSTR[d.pair]&&d.pair!==SY.mainPair){ // Hauptgerät hat das Instrument gewechselt → hier mitziehen (ohne Konto-Reset)
-    SY.mainPair=d.pair;sySave();pair=d.pair;$('pair').value=pair;fx=null;fxAt=0;metalSrc='bn';Object.keys(stratData).forEach(k=>delete stratData[k]);btCache={};lastPlan=null;last=null;await init();
-  }else{SY.mainPair=d.pair;sySave()}
-  return true;
 }
 async function syLoop(manual){
-  if(syBusy||!SY.tok||SY.role==='off')return;syBusy=true;
+  if(syBusy||tabSecondary||!SY.tok||SY.role==='off')return;syBusy=true;
   try{
     await syFindGist(SY.role==='main');
     if(!SY.gist){syMsg='Noch kein Sync-Gist vorhanden – zuerst am Hauptgerät „Hauptgerät“ wählen.';return}
@@ -913,6 +924,7 @@ async function syLoop(manual){
   finally{syBusy=false;syRender();try{render()}catch(_){}}
 }
 async function syBecomeMain(){
+  if(tabSecondary){syMsg='Das Dashboard ist schon in einem anderen Tab dieses Browsers offen – bitte dort umstellen oder den anderen Tab schließen.';syRender();return}
   const tok=$('syTok').value.trim();if(tok)SY.tok=tok;SY.dev.name=$('syName').value.trim()||SY.dev.name||'Gerät '+SY.dev.id.slice(0,4);
   if(!SY.tok){syMsg='Bitte zuerst den Token eintragen.';syRender();return}
   if(acct.bot&&acct.bot.on&&SY.role!=='main'&&!confirm('Hinweis: Dieser Browser hat selbst einen laufenden Bot-Stand. Er wird gleich durch den Stand aus dem Gist ersetzt (falls vorhanden). Fortfahren?'))return;
@@ -928,15 +940,20 @@ async function syBecomeMain(){
 function syRender(){
   const b=$('syBox');if(!b)return;const t=x=>x?new Date(x).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'–';
   const role=!SY.tok||SY.role==='off'?'aus':SY.role==='main'?'<b class="up">Hauptgerät</b> (handelt, lädt hoch)':'<b>nur ansehen</b> (holt Stand vom Hauptgerät)';
-  b.innerHTML=`<div class="kv"><span>Dieses Gerät</span><b>${(SY.dev.name||'ohne Namen').replace(/</g,'&lt;')} · ${role}</b></div>`+
+  b.innerHTML=`<div class="kv"><span>Dieses Gerät</span><b>${(SY.dev.name||'ohne Namen').replace(/</g,'&lt;')} <span class="m">(ID ${SY.dev.id.slice(0,4)})</span> · ${role}</b></div>`+
     (SY.gist?`<div class="kv"><span>Sync-Gist</span><b><a href="https://gist.github.com/${SY.gist}" target="_blank" rel="noopener">${SY.gist.slice(0,8)}…</a></b></div>`:'')+
-    (SY.role==='main'?`<div class="kv"><span>Zuletzt hochgeladen</span><b>${t(SY.lastPush)}</b></div>`:SY.role==='view'?`<div class="kv"><span>Hauptgerät</span><b>${String(SY.mainName||'?').replace(/</g,'&lt;')} · Stand ${t(SY.mainAt)} · Bot ${SY.mainBot?'läuft':'aus'}</b></div><div class="kv"><span>Zuletzt abgeglichen</span><b>${t(SY.lastPull)}</b></div>`:'')+
+    (SY.role==='main'?`<div class="kv"><span>Zuletzt hochgeladen</span><b>${t(SY.lastPush)}</b></div>`:SY.role==='view'?`<div class="kv"><span>Hauptgerät</span><b>${String(SY.mainName||'?').replace(/</g,'&lt;')}${SY.mainId?` <span class="m">(ID ${SY.mainId.slice(0,4)})</span>`:''} · Stand ${t(SY.mainAt)} · Bot ${SY.mainBot?'läuft':'aus'}</b></div><div class="kv"><span>Zuletzt abgeglichen</span><b>${t(SY.lastPull)}</b></div>`:'')+
+    (tabSecondary?`<div class="note dn">⚠ Dieses Dashboard ist in einem anderen Tab dieses Browsers schon offen. Dieser Tab ist nur Anzeige (kein Bot, kein Abgleich). Bitte nur einen Tab offen lassen.</div>`:'')+
+    (syView()&&SY.mainId&&SY.mainId===SY.dev.id?`<div class="note dn">⚠ Das Hauptgerät laut Gist ist <b>dieses Gerät selbst</b> – es steht aber auf „nur ansehen“. Damit läuft der Bot gerade <b>nirgends</b>. Drücke hier „Dieses Gerät = Hauptgerät“, oder mache ein anderes Gerät zum Hauptgerät.</div>`:'')+
     (SY.err?`<div class="note dn">Fehler: ${SY.err.replace(/</g,'&lt;')}</div>`:syMsg?`<div class="note">${syMsg}</div>`:'');
   $('syName').value=$('syName').value||SY.dev.name||'';$('syTok').placeholder=SY.tok?'Token gespeichert ✔ (zum Ändern neu eintragen)':'GitHub-Token (nur Recht „Gists“)';
-  const bd=$('syncBadge');if(bd)bd.innerHTML=syView()?`<span class="dn">NUR ANSEHEN – Hauptgerät: ${String(SY.mainName||'?').replace(/</g,'&lt;')}</span>`:syMainOn()?'<span class="up">SYNC: HAUPTGERÄT</span>':'';
+  const bd=$('syncBadge');if(bd)bd.innerHTML=tabSecondary?'<span class="dn">ZWEITER TAB – NUR ANZEIGE</span>':syView()&&SY.mainId===SY.dev.id?'<span class="dn">⚠ BOT LÄUFT NIRGENDS – siehe Synchronisierung</span>':syView()?`<span class="dn">NUR ANSEHEN – Hauptgerät: ${String(SY.mainName||'?').replace(/</g,'&lt;')}</span>`:syMainOn()?'<span class="up">SYNC: HAUPTGERÄT</span>':'';
 }
 $('syMain').onclick=()=>syBecomeMain();
-$('syView').onclick=()=>{const tok=$('syTok').value.trim();if(tok)SY.tok=tok;SY.dev.name=$('syName').value.trim()||SY.dev.name||'Gerät '+SY.dev.id.slice(0,4);
+$('syView').onclick=()=>{
+  if(tabSecondary){syMsg='Das Dashboard ist schon in einem anderen Tab dieses Browsers offen – bitte dort umstellen.';syRender();return}
+  if(SY.role==='main'&&acct.bot&&acct.bot.on&&!confirm('Dieses Gerät ist Hauptgerät und der Bot läuft hier.\n\nStellst du es auf „nur ansehen“, läuft der Bot NIRGENDS weiter – erst wenn ein anderes Gerät „Hauptgerät“ wird.\n\nTrotzdem umstellen?'))return;
+  const tok=$('syTok').value.trim();if(tok)SY.tok=tok;SY.dev.name=$('syName').value.trim()||SY.dev.name||'Gerät '+SY.dev.id.slice(0,4);
   if(!SY.tok){syMsg='Bitte zuerst den Token eintragen.';syRender();return}SY.role='view';SY.ver=null;sySave();$('syTok').value='';syLoop(true)};
 $('syNow').onclick=()=>syLoop(true);
 $('syOff').onclick=()=>{if(!confirm('Synchronisierung ausschalten und Token aus diesem Browser löschen? Die Daten in diesem Browser bleiben erhalten.'))return;
@@ -944,7 +961,7 @@ $('syOff').onclick=()=>{if(!confirm('Synchronisierung ausschalten und Token aus 
 $('syName').onchange=()=>{SY.dev.name=$('syName').value.trim();sySave();syRender()};
 // Im Ansehen-Modus: keine Handelsaktionen (sie würden beim nächsten Abgleich überschrieben)
 const SY_BLOCK=['b25','b100','s25','s100','oL','oS','cP','panic','botBtn','reset','buyZones','ordList'];
-document.addEventListener('click',e=>{if(!syView())return;const el=e.target&&e.target.closest&&e.target.closest('[id]');
+document.addEventListener('click',e=>{if(!roOnly())return;const el=e.target&&e.target.closest&&e.target.closest('[id]');
   if(el&&SY_BLOCK.includes(el.id)){e.stopPropagation();e.preventDefault();say&&say('Dieses Gerät ist nur zum Ansehen. Handeln und Bot bitte am Hauptgerät – oder hier unter „Synchronisierung“ zum Hauptgerät machen.')}},true);
 setInterval(()=>syLoop(false),SY_EVERY);
 
@@ -1385,7 +1402,7 @@ function ft(t){
 }
 function render(){
   if(!last)return;
-  if(!syView()){checkOrders();checkPos()}renderOrders();longFc();depotRun();rainbowRun();derivRun();if(!syView())eqSample();renderEq();fcCheck();renderFc();
+  if(!roOnly()){checkOrders();checkPos()}renderOrders();longFc();depotRun();rainbowRun();derivRun();if(!roOnly())eqSample();renderEq();fcCheck();renderFc();
   $('price').textContent=fmt(last);
   $('srcLbl').textContent=srcText();$('unitLbl').textContent=UNIT()+' (SPOT / POSITION)';
   $('metalNote').textContent=isMetal()?'Gold/Silber: Der Kurs ist der Perpetual-Kurs (≈ Spot). Spot-Kauf/-Verkauf (auch mit Limit-Kurs) ist hier eine reine Simulation, Long/Short laufen als Perpetual. Der Kurs läuft rund um die Uhr; am Wochenende ist der zugrunde liegende Markt geschlossen, der Perpetual-Preis kann dann stärker abweichen.':'';
@@ -1694,7 +1711,7 @@ async function reEval(b){
   save();
 }
 async function botStep(){
-  if(syView())return; // Bot läuft nur auf dem Hauptgerät
+  if(roOnly())return; // Bot läuft nur auf dem Hauptgerät (und nur im ersten Tab)
   const b=acct.bot;if(!b||!b.on||!last)return;
   const mine=acct.pos&&acct.pos.bot,sp=b.realized+(mine?pnlOf(acct.pos,last):0);
   const stop=(why,msg)=>{if(mine)closePos(why);b.on=false;b.status=msg;say('Auto-Trader: '+msg);if(AL.prefs.bot)notify('bot','Auto-Trader: '+msg,`Bot-P&L ${b.realized>=0?'+':''}${fmt(b.realized)} · Trades ${b.trades}, Treffer ${b.wins}`,true);jlog('EVENT',{event:'BOT_STOP',text:msg,data:JSON.stringify({run:b.runId,realized:b.realized,trades:b.trades,wins:b.wins})});save()};
@@ -2179,7 +2196,7 @@ $('reset').onclick=()=>{jlog('EVENT',{event:'KONTO_RESET',text:'Paper-Konto zur�
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=async()=>{
   tf=b.dataset.tf;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
   $('status').textContent='lade Daten…';await init()});
-$('pair').onchange=async e=>{if(syView()){pair=e.target.value;try{mkRender()}catch(_){}fx=null;fxAt=0;metalSrc='bn';Object.keys(stratData).forEach(k=>delete stratData[k]);btCache={};lastPlan=null;botKey='';botLv=null;last=null;await init();return} // Ansehen-Modus: nur Ansicht wechseln, Konto bleibt
+$('pair').onchange=async e=>{if(roOnly()){pair=e.target.value;try{mkRender()}catch(_){}fx=null;fxAt=0;metalSrc='bn';Object.keys(stratData).forEach(k=>delete stratData[k]);btCache={};lastPlan=null;botKey='';botLv=null;last=null;await init();return} // Ansehen-Modus: nur Ansicht wechseln, Konto bleibt
   if(acct.bot.on&&!confirm('Der Auto-Trader läuft. Ein Instrumentwechsel setzt das Konto zurück und beendet den laufenden Testlauf.\n\nWirklich wechseln?')){e.target.value=pair;return}jlog('EVENT',{event:'INSTRUMENT_WECHSEL',text:`${pair} → ${e.target.value} (Konto zurückgesetzt)`,data:'{}'});pair=e.target.value;try{mkRender()}catch(_){}fx=null;fxAt=0;metalSrc='bn';Object.keys(stratData).forEach(k=>delete stratData[k]);btCache={};lastPlan=null;botKey='';botLv=null;acct=freshAcct();save();last=null;await init()};
 
 async function tick(){

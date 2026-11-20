@@ -36,7 +36,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.4**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.4.1**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|
@@ -45,6 +45,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.2 | Lange Historie (4h ≈ 2 Jahre, 1d ab 2015), Strategie Struktur-Bruch (BOS/CHoCH), Zonen-Invalidierung, Regenbogen, Rückfrage beim Instrumentwechsel |
 | v3.3 | Funding Rate als getestete Strategie „Funding-Extrem“, Karte Derivate-Stimmung (Funding + Open Interest) |
 | v3.4 | Synchronisierung zwischen Geräten über ein geheimes GitHub-Gist (ein Hauptgerät handelt, andere sehen zu) |
+| v3.4.1 | Nur ein Tab je Browser handelt (weitere Tabs = Anzeige), Warnung wenn der Bot nirgends läuft, Rückfrage beim Umstellen des Hauptgeräts |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

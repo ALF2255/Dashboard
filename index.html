@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.4.1 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.4.2 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -338,7 +338,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.4.1';
+const VERSION='v3.4.2';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -944,10 +944,12 @@ function syRender(){
     (SY.gist?`<div class="kv"><span>Sync-Gist</span><b><a href="https://gist.github.com/${SY.gist}" target="_blank" rel="noopener">${SY.gist.slice(0,8)}…</a></b></div>`:'')+
     (SY.role==='main'?`<div class="kv"><span>Zuletzt hochgeladen</span><b>${t(SY.lastPush)}</b></div>`:SY.role==='view'?`<div class="kv"><span>Hauptgerät</span><b>${String(SY.mainName||'?').replace(/</g,'&lt;')}${SY.mainId?` <span class="m">(ID ${SY.mainId.slice(0,4)})</span>`:''} · Stand ${t(SY.mainAt)} · Bot ${SY.mainBot?'läuft':'aus'}</b></div><div class="kv"><span>Zuletzt abgeglichen</span><b>${t(SY.lastPull)}</b></div>`:'')+
     (tabSecondary?`<div class="note dn">⚠ Dieses Dashboard ist in einem anderen Tab dieses Browsers schon offen. Dieser Tab ist nur Anzeige (kein Bot, kein Abgleich). Bitte nur einen Tab offen lassen.</div>`:'')+
-    (syView()&&SY.mainId&&SY.mainId===SY.dev.id?`<div class="note dn">⚠ Das Hauptgerät laut Gist ist <b>dieses Gerät selbst</b> – es steht aber auf „nur ansehen“. Damit läuft der Bot gerade <b>nirgends</b>. Drücke hier „Dieses Gerät = Hauptgerät“, oder mache ein anderes Gerät zum Hauptgerät.</div>`:'')+
+    (syView()&&SY.mainId&&SY.mainId===SY.dev.id?(Date.now()-(SY.mainAt||0)<180e3
+      ?`<div class="note dn">⚠ Ein <b>anderer Tab oder ein anderes Fenster dieses Browsers</b> ist Hauptgerät und lädt noch hoch (Stand ${new Date(SY.mainAt).toLocaleTimeString('de-DE')}) – vermutlich noch mit einer älteren Version ohne Tab-Sperre. Der Bot läuft dort. Bitte <b>alle anderen Dashboard-Tabs/-Fenster schließen</b>, diesen Tab mit Strg+F5 neu laden und dann „Dieses Gerät = Hauptgerät“ drücken.</div>`
+      :`<div class="note dn">⚠ Das Hauptgerät laut Gist ist <b>dieses Gerät selbst</b> – es steht aber auf „nur ansehen“. Damit läuft der Bot gerade <b>nirgends</b>. Drücke hier „Dieses Gerät = Hauptgerät“, oder mache ein anderes Gerät zum Hauptgerät.</div>`):'')+
     (SY.err?`<div class="note dn">Fehler: ${SY.err.replace(/</g,'&lt;')}</div>`:syMsg?`<div class="note">${syMsg}</div>`:'');
   $('syName').value=$('syName').value||SY.dev.name||'';$('syTok').placeholder=SY.tok?'Token gespeichert ✔ (zum Ändern neu eintragen)':'GitHub-Token (nur Recht „Gists“)';
-  const bd=$('syncBadge');if(bd)bd.innerHTML=tabSecondary?'<span class="dn">ZWEITER TAB – NUR ANZEIGE</span>':syView()&&SY.mainId===SY.dev.id?'<span class="dn">⚠ BOT LÄUFT NIRGENDS – siehe Synchronisierung</span>':syView()?`<span class="dn">NUR ANSEHEN – Hauptgerät: ${String(SY.mainName||'?').replace(/</g,'&lt;')}</span>`:syMainOn()?'<span class="up">SYNC: HAUPTGERÄT</span>':'';
+  const bd=$('syncBadge');if(bd)bd.innerHTML=tabSecondary?'<span class="dn">ZWEITER TAB – NUR ANZEIGE</span>':syView()&&SY.mainId===SY.dev.id?(Date.now()-(SY.mainAt||0)<180e3?'<span class="dn">⚠ ZWEITER TAB/FENSTER AKTIV – siehe Synchronisierung</span>':'<span class="dn">⚠ BOT LÄUFT NIRGENDS – siehe Synchronisierung</span>'):syView()?`<span class="dn">NUR ANSEHEN – Hauptgerät: ${String(SY.mainName||'?').replace(/</g,'&lt;')}</span>`:syMainOn()?'<span class="up">SYNC: HAUPTGERÄT</span>':'';
 }
 $('syMain').onclick=()=>syBecomeMain();
 $('syView').onclick=()=>{

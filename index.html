@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.4.2 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.4.3 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -338,7 +338,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.4.2';
+const VERSION='v3.4.3';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -847,7 +847,7 @@ addEventListener('beforeunload',()=>{try{const o=JSON.parse(localStorage.getItem
 const roOnly=()=>syView()||tabSecondary;
 let syBusy=false,syMsg='';
 async function gh(path,opt={}){
-  const r=await fetch('https://api.github.com'+path,{...opt,headers:{Authorization:'Bearer '+SY.tok,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}});
+  const r=await fetch('https://api.github.com'+path,{cache:'no-store',...opt,headers:{Authorization:'Bearer '+SY.tok,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}});
   if(!r.ok){let m='GitHub '+r.status;try{const j=await r.json();if(j.message)m+=': '+j.message}catch(_){}
     if(r.status===401)m+=' – Token ungültig oder abgelaufen';if(r.status===403||r.status===404)m+=' – Token hat vermutlich kein Recht „Gists: Read and write“';throw new Error(m)}
   return r.status===204?null:r.json();
@@ -872,7 +872,7 @@ async function syFindGist(create){
 }
 const syHead=async()=>{const c=await gh(`/gists/${SY.gist}/commits?per_page=1`);return c&&c[0]?c[0].version:null};
 async function syRead(){const g=await gh('/gists/'+SY.gist),f=g.files&&g.files[SY_FILE];if(!f)return null;
-  let txt=f.content;if(f.truncated||txt==null){const r=await fetch(f.raw_url);if(!r.ok)throw new Error('Gist-Datei nicht lesbar ('+r.status+')');txt=await r.text()}
+  let txt=f.content;if(f.truncated||txt==null){const r=await fetch(f.raw_url,{cache:'no-store'});if(!r.ok)throw new Error('Gist-Datei nicht lesbar ('+r.status+')');txt=await r.text()}
   return{ver:g.history&&g.history[0]&&g.history[0].version,data:await syUnpack(txt)}}
 function syCollect(){const keys={};bkKeys().forEach(n=>keys[n]=localStorage.getItem(n));return keys}
 async function syPush(force){
@@ -910,10 +910,12 @@ async function syLoop(manual){
     if(!SY.gist){syMsg='Noch kein Sync-Gist vorhanden – zuerst am Hauptgerät „Hauptgerät“ wählen.';return}
     const head=await syHead();
     if(SY.role==='main'){
-      if(SY.ver&&head&&head!==SY.ver){ // ein anderes Gerät hat geschrieben → Hauptrolle abgeben
+      if(SY.ver&&head&&head!==SY.ver){ // neue Gist-Version – prüfen, WER geschrieben hat (Version allein kann veraltet/zwischengespeichert sein)
+        const chk=await syRead();
+        if(!chk||!chk.data||!chk.data.dev||chk.data.dev.id===SY.dev.id){SY.ver=chk&&chk.ver||head;sySave();const did=await syPush(!!manual);syMsg=did?'Stand hochgeladen.':'Keine Änderungen.';SY.err='';return}
         SY.role='view';sySave();syMsg='Ein anderes Gerät ist jetzt Hauptgerät – dieses Gerät wurde auf „nur ansehen“ umgestellt.';
         if(typeof notify==='function'){try{notify('bot','Synchronisierung',syMsg,true)}catch(_){}}
-        const r=await syRead();if(r){await syApply(r.data);SY.ver=r.ver;sySave()}return}
+        await syApply(chk.data);SY.ver=chk.ver;sySave();return}
       const did=await syPush(!!manual);syMsg=did?'Stand hochgeladen.':'Keine Änderungen.';
     }else{
       if(manual||!SY.ver||head!==SY.ver){const r=await syRead();if(r&&r.data){await syApply(r.data);SY.ver=r.ver;sySave();syMsg='Stand vom Hauptgerät übernommen.'}else syMsg='Im Gist liegt noch kein Stand.'}

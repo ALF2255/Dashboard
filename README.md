@@ -36,7 +36,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.4.2**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.4.3**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|
@@ -47,6 +47,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.4 | Synchronisierung zwischen Geräten über ein geheimes GitHub-Gist (ein Hauptgerät handelt, andere sehen zu) |
 | v3.4.1 | Nur ein Tab je Browser handelt (weitere Tabs = Anzeige), Warnung wenn der Bot nirgends läuft, Rückfrage beim Umstellen des Hauptgeräts |
 | v3.4.2 | Klarere Warnung, wenn ein zweiter Tab/ein zweites Fenster desselben Browsers noch Hauptgerät ist |
+| v3.4.3 | Fehlerkorrektur: Hauptgerät stellte sich wegen zwischengespeicherter GitHub-Antworten fälschlich selbst auf „ansehen“ |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

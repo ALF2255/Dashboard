@@ -19,6 +19,7 @@ Live-Dashboard für Bitcoin (und ETH, ZEC, Gold, Silber) mit Chart, Analyse, Zon
 - Derivate-Stimmung: Funding Rate und Open Interest (Binance Futures)
 - **Ampel-Backtest** (ab v3.5): prüft die Ampel der Langfrist-Prognose rückwirkend an der ganzen Historie und vergleicht sie mit einem Zufallssignal; prüft außerdem, ob die Szenario-Prozente (bullisch/seitwärts/bärisch) und das 80 %-Band in der Vergangenheit gestimmt haben
 - **Szenarien aus echten Kursbewegungen** (ab v3.7): bis 4 Wochen werden Bullisch/Seitwärts/Bärisch aus der Verteilung der vergangenen, standardisierten Kursbewegungen berechnet statt aus einer Glockenkurve (Bitcoin bewegt sich meist wenig und manchmal extrem); 6 und 12 Monate weiter mit Glockenkurve
+- **Szenarien im Chart** (ab v3.8): Schalter „Szenarien“ zeichnet Bullisch/Seitwärts/Bärisch mit Wahrscheinlichkeit und Bestätigungsmarken in den Chart; Horizont wählbar (passend zur Zeiteinheit, 4 Std, 7 Tage, 4 Wochen)
 - **Prognose-Labor** (ab v3.6): testet 26 Signal-Ideen auf Stunden-, Tages- und Monatsebene (Übertreibung, RSI, Trend, Funding, 200-Tage-Linie, Mayer-Multiple, Regenbogen) ohne Blick in die Zukunft; „bestanden“ nur bei t ≥ 2,5, mind. 30 unabhängigen Fällen und Vorteil in beiden Hälften des Testzeitraums
 - Bitcoin-Regenbogen als Langfrist-Bewertung (nur Anzeige)
 
@@ -39,7 +40,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.7.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.8.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|

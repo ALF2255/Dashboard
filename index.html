@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.7.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.8.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -63,6 +63,8 @@ label.f{display:block}
     <label><input type="checkbox" id="tZone" checked>Long/Short-Zonen</label>
     <label><input type="checkbox" id="tRev" checked>Trendwende</label>
     <label><input type="checkbox" id="tBuy" checked>Kauf-/Verkaufszonen (Spot)</label>
+    <label><input type="checkbox" id="tScen" checked>Szenarien</label>
+    <select id="scenSel" style="padding:2px 6px;font-size:11px;border-radius:99px"><option value="auto" selected>Szenario: passend</option><option value="4h">Szenario 4 Std</option><option value="7d">Szenario 7 Tage</option><option value="28d">Szenario 4 Wochen</option></select>
     <label><input type="checkbox" id="tEw" checked>Elliott-Wellen</label>
     <select id="ewSens" style="padding:2px 6px;font-size:11px;border-radius:99px"><option value="2.5">Wellen fein</option><option value="3.5" selected>Wellen mittel</option><option value="5">Wellen grob</option></select>
   </div>
@@ -356,7 +358,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.7.0';
+const VERSION='v3.8.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -1496,12 +1498,25 @@ function draw(a){
   let bbs=[];if($('tBb').checked)for(let i=0;i<show;i++){const b=boll(a.c,off+i);if(b){hiV.push(b.up);loV.push(b.lo);bbs.push(b)}else bbs.push(null)}
   if($('tZone').checked){hiV.push(a.zn.short.sl);loV.push(a.zn.long.sl)}
   if($('tBuy').checked&&a.zn.buy){a.zn.buy.forEach(z=>loV.push(z.lo));(a.zn.sellz||[]).forEach(z=>hiV.push(z.hi))}
+  const SC=$('tScen').checked&&SCEN_PAIR===pair?SCEN_LV[scenPick()]||SCEN_LV['7d']:null;
+  if(SC){hiV.push(SC.bullHi);loV.push(SC.bearLo);if(SC.conf){if(SC.conf.hi)hiV.push(SC.conf.hi);if(SC.conf.lo)loV.push(SC.conf.lo)}}
   let L0=Math.log(Math.min(...loV))-.02,L1=Math.log(Math.max(...hiV))+.02;axX=pw;
   {const r=L1-L0,mid=(L0+L1)/2+vS*r;L0=mid-r*vZ/2;L1=mid+r*vZ/2;const zi=$('zInfo');if(zi&&(vZ!==1||vS!==0))zi.textContent+=' · Preis '+(vZ<1?'×'+(1/vZ).toFixed(1):'÷'+vZ.toFixed(1))}
   const X=i=>(i+.5)/total*pw,Y=v=>pt+(1-(Math.log(v)-L0)/(L1-L0))*ph;
   g.font='10px ui-monospace,monospace';g.lineWidth=1;
   for(let i=0;i<=4;i++){const v=Math.exp(L0+(L1-L0)*i/4),y=Y(v);g.strokeStyle=line;g.beginPath();g.moveTo(0,y);g.lineTo(pw,y);g.stroke();g.fillStyle=mute;g.fillText(pf(v),pw+4,y+3)}
   g.fillStyle=mute;for(let i=0;i<=4;i++){const k=Math.round(i*(total-1)/4),t=k<show?cs[k].t:a.t0+(k-show+1)*a.step;g.fillText(ft(t),Math.min(X(k)-14,pw-34),h-6)}
+  const scL=[];if(SC){const SEI='#b58b2a',PU='#7a5cc7',x1=pw*.55;g.font='bold 10px ui-monospace,monospace';g.textAlign='left';
+    const zone=(lo,hi,c,lab)=>{if(hi<Math.exp(L0)||lo>Math.exp(L1))return;const y1=Math.max(pt,Y(hi)),y2=Math.min(pt+ph,Y(lo));
+      g.globalAlpha=.07;g.fillStyle=c;g.fillRect(0,y1,pw,y2-y1);g.globalAlpha=.2;g.fillRect(x1,y1,pw-x1,y2-y1);g.globalAlpha=1;
+      scL.push([lab,x1+4,Math.max(y1+11,Math.min(y2-4,(y1+y2)/2+4)),c,1])};
+    zone(SC.up,SC.bullHi,UP,`▲ BULLISCH ${SC.a} % · ${pf(SC.up)}–${pf(SC.bullHi)}`);
+    zone(SC.dn,SC.up,SEI,`◆ SEITWÄRTS ${SC.b} % · ${SC.title}`);
+    zone(SC.bearLo,SC.dn,DN,`▼ BÄRISCH ${SC.c} % · ${pf(SC.bearLo)}–${pf(SC.dn)}`);
+    g.font='10px ui-monospace,monospace';
+    const cl=(v,lab)=>{if(!v||Math.log(v)<L0||Math.log(v)>L1)return;const y=Y(v);g.strokeStyle=PU;g.lineWidth=1.3;g.setLineDash([12,4,2,4]);g.beginPath();g.moveTo(0,y);g.lineTo(pw,y);g.stroke();g.setLineDash([]);g.lineWidth=1;scL.push([lab,4,y-3,PU,0])};
+    if(SC.conf){cl(SC.conf.hi,`Bestätigung ↑ ${SC.conf.hl} ${pf(SC.conf.hi)}`);cl(SC.conf.lo,`Bestätigung ↓ ${SC.conf.ll} ${pf(SC.conf.lo)}`)}
+  }
   if($('tZone').checked){const Z=a.zn;g.font='10px ui-monospace,monospace';g.textAlign='right';
     const zb=(z,c,lab,al)=>{if(z.hi<Math.exp(L0)||z.lo>Math.exp(L1))return;const y1=Math.max(pt,Y(z.hi)),y2=Math.min(pt+ph,Y(z.lo));g.globalAlpha=al;g.fillStyle=c;g.fillRect(0,y1,pw,Math.max(2,y2-y1));g.globalAlpha=1;g.fillText(lab,pw-4,y1+10)};
     const sl=(v,c,lab)=>{if(Math.log(v)<L0||Math.log(v)>L1)return;const y=Y(v);g.strokeStyle=c;g.setLineDash([2,3]);g.beginPath();g.moveTo(0,y);g.lineTo(pw,y);g.stroke();g.setLineDash([]);g.fillStyle=c;g.fillText(lab,pw-4,y-3)};
@@ -1548,6 +1563,8 @@ function draw(a){
   g.setLineDash([5,4]);g.strokeStyle=ink;g.lineWidth=1.4;g.beginPath();g.moveTo(x0,y0);a.cone.forEach((r,i)=>g.lineTo(X(show+i),Y(r[2])));g.stroke();g.setLineDash([])}
   g.strokeStyle=mute;g.setLineDash([2,3]);g.beginPath();g.moveTo(x0,pt);g.lineTo(x0,pt+ph);g.stroke();g.setLineDash([]);
   g.fillStyle=ink;g.beginPath();g.arc(x0,y0,3,0,7);g.fill();
+  if(scL.length){const bg=col('--card')||'#fff';scL.forEach(([t,x,y,c,b])=>{g.font=(b?'bold ':'')+'10px ui-monospace,monospace';const tw=g.measureText(t).width;
+    g.globalAlpha=.85;g.fillStyle=bg;g.fillRect(x-2,y-10,tw+4,13);g.globalAlpha=1;g.fillStyle=c;g.textAlign='left';g.fillText(t,x,y)});g.font='10px ui-monospace,monospace'}
   // MACD
   const cm=$('cm');cm.style.display=$('tMacd').checked?'block':'none';
   if($('tMacd').checked){
@@ -2413,18 +2430,20 @@ function scenU(c,sEw,sLk,mwk,h,perDay,k){ // standardisierte h-Rendite ab Index 
 }
 function empF(us){const n=us.length;return x=>{let k=0;for(let i=0;i<n;i++)if(us[i]<=x)k++;return k/n}}
 const SCEN_EMP_MIN=30; // mind. 30 unabhängige Zeiträume, sonst Glockenkurve
+let SCEN_LV={},SCEN_PAIR='';
+function scenPick(){const v=$('scenSel')?$('scenSel').value:'auto';if(v!=='auto')return v;return['1m','5m','15m'].includes(tf)?'4h':['1d','1w'].includes(tf)?'28d':'7d'}
 function renderScen(){
   const el=$('scenBox');if(!el||!LF)return;const {S,sShort,sLong,mw,cd,cw,ch,sH}=LF,dec=S<500?2:0,mean=a=>a.reduce((x,y)=>x+y,0)/a.length;let SIG=3;
   const rs=v=>{if(!(v>0))return v;const e=Math.pow(10,Math.floor(Math.log10(v))-(SIG-1));return Math.round(v/e)*e},px=v=>fmt(rs(v),dec);
   const empFor=(c,sEw,sL,h,perDay)=>{if(!c||!sEw)return null;const us=[];for(let k=12;k+h<c.length;k++){const u=scenU(c,sEw,()=>sL,()=>mw,h,perDay,k);if(isFinite(u))us.push(u)}return us.length/h>=SCEN_EMP_MIN?empF(us):null};
   const ewD=abtEwma(cd),ewH=ch&&ch.length>50?abtEwma(ch):null;let nEmp=0;
-  const card=(title,sub,h,lv,sS=sShort,sL=sLong,perDay=1,src=null)=>{
+  const card=(title,sub,h,lv,sS=sShort,sL=sLong,perDay=1,src=null,key=null,conf=null)=>{
     const w=Math.exp(-(h/perDay)/60),sd=Math.sqrt(w*sS*sS+(1-w)*sL*sL),mu0=Math.max(-.15*sd,Math.min(.15*sd,.3*mw/perDay)),mu=mu0*h,sg=sd*Math.sqrt(h),th=.5*sg;SIG=th<.02?4:3;
     const zb=(-th-mu)/sg,za=(th-mu)/sg,F=src?empFor(src[0],src[1],sL,h,perDay):null,G=F||cdf;if(F)nEmp++;
     const pB=G(zb),pS=G(za)-G(zb),pU=1-G(za);
     let a=Math.round(pU*100),b=Math.round(pS*100),c=100-a-b;
     const cq=(lo,hi,q)=>S*Math.exp(mu+sg*invPhi(cdf(lo)+q*(cdf(hi)-cdf(lo))));
-    const up=S*Math.exp(th),dn=S*Math.exp(-th),bullHi=cq(za,8,.8),bearLo=cq(-8,zb,.2),pct=(th>=.01?Math.round(th*1000)/10:Math.round(th*10000)/100).toString().replace('.',',');
+    const up=S*Math.exp(th),dn=S*Math.exp(-th),bullHi=cq(za,8,.8),bearLo=cq(-8,zb,.2);if(key)SCEN_LV[key]={title,a,b,c,up,dn,bullHi,bearLo,conf};const pct=(th>=.01?Math.round(th*1000)/10:Math.round(th*10000)/100).toString().replace('.',',');
     const bar=(lab,pc,col,rng,txt)=>`<div style="margin:10px 0 4px"><b>${lab} ${pc} %</b></div><div style="height:10px;border-radius:99px;background:var(--line)"><div style="height:10px;border-radius:99px;width:${pc}%;background:${col}"></div></div><div style="margin-top:4px">${rng}</div><div class="m" style="margin-top:2px">${txt}</div>`;
     return`<div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px"><div style="font-size:17px;font-weight:700">${title}</div><div class="m">${sub}${F?' · aus echten Kursbewegungen':' · Glockenkurve (zu wenig Daten)'}</div>
       ${bar('Bullisch',a,'var(--up)',`${px(up)}–${px(bullHi)}`,`Kurs steigt um mehr als ${pct} %.`)}
@@ -2441,8 +2460,10 @@ function renderScen(){
   const hi7=Math.max(...cd.slice(-7)),lo7=Math.min(...cd.slice(-7)),s10=cd.length>=10?mean(cd.slice(-10)):null;
   SIG=4;const lh=hiH==null?'':`<b>Bestätigung Aufwärtsbild:</b> Stundenschluss über ${px(hiH)} (24-Std-Hoch).<br><b>Bestätigung Abwärtsbild:</b> mehrere Stundenschlüsse unter ${px(loH)} (24-Std-Tief).<br><span class="m">Kurs liegt ${S>sH24?'über':'unter'} dem 24-Std-Durchschnitt (${px(sH24)}).</span>`;
   const ld=`<b>Bestätigung Aufwärtsbild:</b> Tagesschluss über ${px(hi7)} (7-Tage-Hoch).<br><b>Bestätigung Abwärtsbild:</b> mehrere Schlusskurse unter ${px(lo7)} (7-Tage-Tief).${s10?`<br><span class="m">Kurs liegt ${S>s10?'über':'unter'} der 10-Tage-Linie (${px(s10)}).</span>`:''}`;
-  el.innerHTML=(sH&&lh?card('1–4 Stunden','gerechnet auf 4 Stunden',4,lh,sH,sLong/Math.sqrt(24),24,ewH?[ch,ewH]:null):'')+card('1–7 Tage','gerechnet auf 7 Tage',7,ld,sShort,sLong,1,[cd,ewD])+card('1–4 Wochen','gerechnet auf 4 Wochen',28,l1,sShort,sLong,1,[cd,ewD])+card('1–6 Monate','gerechnet auf 6 Monate',182,l6)+card('6–12 Monate','gerechnet auf 12 Monate',365,l2)+`<div class="note" style="margin-top:10px">Wahrscheinlichkeiten aus der aktuellen Schwankung (kehrt mit der Zeit zur langfristigen zurück) plus stark gedämpftem Trend. Bis 4 Wochen wird die Form aus den echten vergangenen Kursbewegungen genommen: Bitcoin bewegt sich meist wenig und manchmal extrem, deshalb ist „Seitwärts" häufiger als bei einer Glockenkurve. Für 6 und 12 Monate gibt es dafür zu wenige unabhängige Zeiträume, dort gilt weiter die Glockenkurve. „Seitwärts" heißt: innerhalb ±0,5 Standardabweichungen des Horizonts. Die Bereiche zeigen jeweils, wo der Kurs im jeweiligen Szenario typischerweise landet (die Mitte von 80 %). Das ist keine Vorhersage und keine Anlageberatung.</div>`;
+  SCEN_LV={};SCEN_PAIR=pair;
+  el.innerHTML=(sH&&lh?card('1–4 Stunden','gerechnet auf 4 Stunden',4,lh,sH,sLong/Math.sqrt(24),24,ewH?[ch,ewH]:null,'4h',{hi:hiH,lo:loH,hl:'Stundenschluss über',ll:'Stundenschlüsse unter'}):'')+card('1–7 Tage','gerechnet auf 7 Tage',7,ld,sShort,sLong,1,[cd,ewD],'7d',{hi:hi7,lo:lo7,hl:'Tagesschluss über',ll:'Schlusskurse unter'})+card('1–4 Wochen','gerechnet auf 4 Wochen',28,l1,sShort,sLong,1,[cd,ewD],'28d',{hi:hi20,lo:lo20,hl:'Tagesschluss über',ll:'Schlusskurse unter'})+card('1–6 Monate','gerechnet auf 6 Monate',182,l6)+card('6–12 Monate','gerechnet auf 12 Monate',365,l2)+`<div class="note" style="margin-top:10px">Wahrscheinlichkeiten aus der aktuellen Schwankung (kehrt mit der Zeit zur langfristigen zurück) plus stark gedämpftem Trend. Bis 4 Wochen wird die Form aus den echten vergangenen Kursbewegungen genommen: Bitcoin bewegt sich meist wenig und manchmal extrem, deshalb ist „Seitwärts" häufiger als bei einer Glockenkurve. Für 6 und 12 Monate gibt es dafür zu wenige unabhängige Zeiträume, dort gilt weiter die Glockenkurve. „Seitwärts" heißt: innerhalb ±0,5 Standardabweichungen des Horizonts. Die Bereiche zeigen jeweils, wo der Kurs im jeweiligen Szenario typischerweise landet (die Mitte von 80 %). Das ist keine Vorhersage und keine Anlageberatung.</div>`;
   $('scenLabel').textContent='SZENARIEN · '+pair;
+  if(lastDrawA)try{draw(lastDrawA)}catch(_){}
 }
 function fullNote(){const n=$('fullNote');if(!n)return;if(!acct.cfg.full){n.style.display='none';return}const inv=+acct.cfg.inv||0,lev=+$('lev').value||1;n.style.display='block';n.innerHTML=`⚠ Voller Einsatz: Der Bot setzt je Trade ${fmt(inv,0)} Margin × ${lev}× Hebel = ${fmt(inv*lev,0)} Positionsgröße ein. Bei 1 % Kursbewegung gegen dich ≈ ${fmt(inv*lev*.01,0)}, bei 3 % ≈ ${fmt(inv*lev*.03,0)} Verlust – das kann über dem Verlustlimit (${fmt(acct.cfg.mxl,0)}) liegen. Das Limit schließt die Position erst beim nächsten Check (ca. alle 2 s), bei schnellen Kursen mit Überschreitung. Nur Simulation.`}
 $('useRegime').checked=acct.cfg.regime!==false;$('useRegime').onchange=()=>{acct.cfg.regime=$('useRegime').checked;lastPlan=null;botKey='';save();render()};
@@ -2453,6 +2474,7 @@ $('tmx').value=+(acct.cfg.tmx/60).toFixed(2);$('tmx').oninput=()=>{acct.cfg.tmx=
 document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{acct.cfg.inv=Math.floor(acct.cash*b.dataset.p/100);$('inv').value=acct.cfg.inv;save();render()});
 $('reset').onclick=()=>{jlog('EVENT',{event:'KONTO_RESET',text:'Paper-Konto zurückgesetzt',data:JSON.stringify({cash:acct.cash,btc:acct.btc,offenePosition:!!acct.pos})});acct=freshAcct();save();render()};
 ['tCandle','tVol','tSma','tBb','tMacd','tFib','tEw','tZone','tRev','tBuy','ewSens'].forEach(i=>$(i).onchange=render);
+['tScen','scenSel'].forEach(i=>$(i).onchange=()=>{if(lastDrawA)draw(lastDrawA)});
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=async()=>{
   tf=b.dataset.tf;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
   $('status').textContent='lade Daten…';await init()});

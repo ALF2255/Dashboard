@@ -17,6 +17,7 @@ Live-Dashboard für Bitcoin (und ETH, ZEC, Gold, Silber) mit Chart, Analyse, Zon
   - **Handelssperre:** Der Bot handelt nur bei belegtem Vorteil (t ≥ 2,5 und mindestens 30 Trades außerhalb der Stichprobe)
   - Marktphasen-Filter (bullisch / bärisch / seitwärts)
 - Derivate-Stimmung: Funding Rate und Open Interest (Binance Futures)
+- **Ampel-Backtest** (ab v3.5): prüft die Ampel der Langfrist-Prognose rückwirkend an der ganzen Historie und vergleicht sie mit einem Zufallssignal
 - Bitcoin-Regenbogen als Langfrist-Bewertung (nur Anzeige)
 
 ## Mehrere Geräte (ab v3.4)
@@ -36,7 +37,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.4.3**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.5.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.4.3 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.5.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -106,6 +106,13 @@ label.f{display:block}
   <div class="m" id="longLabel">LANGFRIST-PROGNOSE</div>
   <table><thead><tr><th>HORIZONT</th><th>AMPEL</th><th>HÖHER</th><th>MEDIAN</th><th>80 %-BEREICH</th></tr></thead><tbody id="longTb"><tr><td colspan="5">lädt…</td></tr></tbody></table>
   <div class="note" id="longNote" style="margin-top:8px"></div>
+</div>
+
+<div class="card" id="abtCard">
+  <div class="row"><div class="m" id="abtLabel">AMPEL-BACKTEST</div><button id="abtRun" style="padding:8px 12px">Backtest starten</button></div>
+  <div class="note" id="abtInfo" style="margin:6px 0">Prüft die Ampel der Langfrist-Prognose rückwirkend: An jedem vergangenen Zeitpunkt wird die Ampel nur mit den Kursen berechnet, die es damals gab, und mit dem Kurs nach Ablauf des Horizonts verglichen. Lädt einmalig die lange Historie (ca. 10–30 Sekunden).</div>
+  <table><thead><tr><th>HORIZONT</th><th>SIGNALE</th><th>TREFFER</th><th>🟢↑ · 🔴↓</th><th>URTEIL</th></tr></thead><tbody id="abtTb"></tbody></table>
+  <div class="note" id="abtNote" style="margin-top:8px"><b>So liest du es:</b> „Signale" zählt grüne und rote Ampeln (in Klammern gelbe, die nicht gewertet werden). „Treffer" = wie oft die Richtung stimmte. „🟢↑ · 🔴↓" = wie oft der Kurs nach Grün gestiegen bzw. nach Rot gefallen ist. „Zufall" = Trefferquote, die ein Zufallssignal mit gleich vielen grünen und roten Ampeln erreicht hätte; das berücksichtigt, dass der Markt im Testzeitraum öfter gestiegen als gefallen ist. Benachbarte Zeitpunkte überlappen sich, deshalb rechnet das Urteil nur mit der Zahl unabhängiger Zeiträume („unabh."). Vergangene Treffer sind keine Garantie für die Zukunft.</div>
 </div>
 
 <div class="card" id="rbCard">
@@ -338,7 +345,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.4.3';
+const VERSION='v3.5.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -1868,10 +1875,89 @@ async function longFc(){
     tb.innerHTML=rows.join('');longKey=key;try{fcLog(S,recs)}catch(_){}LF={S,sShort,sLong,mw,cd,cw,ch,sH:ch.length>=100?core(ch).sigma:null};renderScen();
     const s200=cd.length>=200?mean(cd.slice(-200)):null;
     $('longLabel').textContent='LANGFRIST-PROGNOSE · '+pair;
-    $('longNote').innerHTML=`Ampel = Wahrscheinlichkeit „Höher" + Kurs über/unter der passenden Durchschnittslinie + Kursentwicklung der letzten Periode (🟢 mind. 2 von 3 positiv, 🔴 mind. 2 von 3 negativ, sonst 🟡). Bei 1 h, 4 h und 24 h gibt es keine Richtungs-Wahrscheinlichkeit (immer 50 %), die Ampel nutzt dort nur Trend und Kursentwicklung der letzten Stunden.${s200?` Aktuell liegt der Kurs ${S>s200?'über':'unter'} der 200-Tage-Linie.`:''} Die Bänder nutzen die kurzfristige Schwankung, die mit der Zeit zur langfristigen zurückkehrt, und einen stark gedämpften historischen Trend. Je länger der Horizont, desto unsicherer: Das ist ein Wahrscheinlichkeitsbild, keine Vorhersage, und die Ampel ist nicht auf Treffsicherheit getestet.`;
+    $('longNote').innerHTML=`Ampel = Wahrscheinlichkeit „Höher" + Kurs über/unter der passenden Durchschnittslinie + Kursentwicklung der letzten Periode (🟢 mind. 2 von 3 positiv, 🔴 mind. 2 von 3 negativ, sonst 🟡). Bei 1 h, 4 h und 24 h gibt es keine Richtungs-Wahrscheinlichkeit (immer 50 %), die Ampel nutzt dort nur Trend und Kursentwicklung der letzten Stunden.${s200?` Aktuell liegt der Kurs ${S>s200?'über':'unter'} der 200-Tage-Linie.`:''} Die Bänder nutzen die kurzfristige Schwankung, die mit der Zeit zur langfristigen zurückkehrt, und einen stark gedämpften historischen Trend. Je länger der Horizont, desto unsicherer: Das ist ein Wahrscheinlichkeitsbild, keine Vorhersage, wie treffsicher die Ampel bisher war, zeigt der Ampel-Backtest darunter.`;
   }catch(e){tb.innerHTML=`<tr><td colspan="5">Langfrist-Daten nicht verfügbar (${e.message})</td></tr>`}
   finally{longBusy=false}
 }
+// ---------- Ampel-Backtest (v3.5) ----------
+// Rechnet die Ampel der Langfrist-Prognose an jedem vergangenen Zeitpunkt nur mit damals bekannten Kursen nach
+// (gleiche Formeln wie longFc) und vergleicht mit dem Kurs nach Ablauf des Horizonts.
+let abtBusy=false;
+function abtEwma(c,lam=.94){ // EWMA-Volatilität wie core(), fortlaufend: out[i] = sigma nach Kurs i
+  const out=new Float64Array(c.length);if(c.length<12)return out;let v=0;
+  for(let i=1;i<=10;i++){const x=Math.log(c[i]/c[i-1]);v+=x*x}v/=10;
+  for(let i=1;i<c.length;i++){const x=Math.log(c[i]/c[i-1]);v=lam*v+(1-lam)*x*x;out[i]=Math.sqrt(v)}
+  return out;
+}
+function abtStats(sig,lab,step){ // sig: [{a:+1/-1/0, up:bool}], step = Horizont in Kerzen (für unabhängige Zeiträume)
+  const g=sig.filter(s=>s.a===1),r=sig.filter(s=>s.a===-1),y=sig.length-g.length-r.length,n=g.length+r.length;
+  if(!n)return{lab,n:0,y};
+  const gu=g.filter(s=>s.up).length,rd=r.filter(s=>!s.up).length,hit=(gu+rd)/n;
+  const pUp=sig.filter(s=>s.up).length/sig.length,pg=g.length/n,exp=pg*pUp+(1-pg)*(1-pUp);
+  const neff=Math.max(1,Math.floor(n/Math.max(1,step))),se=Math.sqrt(Math.max(1e-9,exp*(1-exp))/neff),z=(hit-exp)/se;
+  return{lab,n,y,ng:g.length,nr:r.length,gu:g.length?gu/g.length:null,rd:r.length?rd/r.length:null,hit,exp,neff,z};
+}
+async function ampelBacktest(){
+  if(abtBusy)return;abtBusy=true;const tb=$('abtTb'),btn=$('abtRun'),info=$('abtInfo');
+  btn.disabled=true;btn.textContent='läuft…';tb.innerHTML='<tr><td colspan="5">Lade Historie…</td></tr>';
+  try{
+    const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    const res=[];let spanTxt=[];
+    // --- Stunden-Horizonte (1 h, 4 h, 24 h) aus Stundenkerzen ---
+    let ch=[];try{ch=await fetchTf('1h')}catch(_){}
+    const dk=await fetchTfBT('1d');const cd=dk.map(x=>x.c);
+    if(ch.length>=300&&cd.length>=60){
+      const c=ch.map(x=>x.c),sH=abtEwma(c);
+      // sLong (Wochen-Schwankung) zum jeweiligen Zeitpunkt beeinflusst nur die Bänder, nicht die Ampel der Stunden-Horizonte
+      for(const [lab,hh,sm] of [['1 Stunde',1,24],['4 Stunden',4,48],['24 Stunden',24,168]]){
+        const sig=[];
+        for(let i=Math.max(sm,100);i+hh<c.length;i++){
+          const S=c[i];let sc=0;let s=0;for(let k=i-sm+1;k<=i;k++)s+=c[k];sc+=S>s/sm?1:-1;sc+=S>c[i-hh]?1:-1;
+          const a=sc>=2?1:sc<=-2?-1:0;if(c[i+hh]===S)continue;sig.push({a,up:c[i+hh]>S});
+        }
+        res.push(abtStats(sig,lab,hh));
+      }
+      spanTxt.push(`Stunden: ${new Date(ch[0].t*1000).toLocaleDateString('de-DE')} – ${new Date(ch[ch.length-1].t*1000).toLocaleDateString('de-DE')} (${ch.length} Kerzen)`);
+    }
+    // --- Tages-Horizonte aus Tageskerzen (lange Historie) ---
+    tb.innerHTML='<tr><td colspan="5">Rechne…</td></tr>';await new Promise(r=>setTimeout(r,30));
+    if(cd.length>=260){
+      const sS=abtEwma(cd),WIN=1196,WW=2093;
+      const pre=new Float64Array(cd.length+1);cd.forEach((v,i)=>pre[i+1]=pre[i]+v);
+      const stat=new Array(cd.length); // je Zeitpunkt: sShort, sLong, mw (wie longFc, nur mit damals bekannten Kursen)
+      for(let i=230;i<cd.length;i++){
+        const w0=Math.max(0,i-WW),rw=[];for(let k=i;k-7>=w0;k-=7)rw.push(Math.log(cd[k]/cd[k-7]));
+        if(rw.length<30){stat[i]=null;continue}
+        const m=mean(rw),sd=Math.sqrt(rw.reduce((x,y)=>x+(y-m)*(y-m),0)/(rw.length-1));
+        stat[i]={sS:sS[i],sL:sd/Math.sqrt(7),mw:m/7};
+      }
+      for(const [lab,h,sm] of HZ){
+        const sig=[];
+        for(let i=230;i+h<cd.length;i++){
+          const st=stat[i];if(!st)continue;const S=cd[i];
+          const w=Math.exp(-h/60),sd=Math.sqrt(w*st.sS*st.sS+(1-w)*st.sL*st.sL),mu0=Math.max(-.15*sd,Math.min(.15*sd,.3*st.mw)),mu=mu0*h,sg=sd*Math.sqrt(h),pUp=cdf(mu/sg);
+          let sc=pUp>=.58?1:pUp<=.42?-1:0;
+          const n0=Math.min(i+1,WIN);if(n0>=sm){const sma=(pre[i+1]-pre[i+1-sm])/sm;sc+=S>sma?1:-1}
+          if(n0>h)sc+=S>cd[i-h]?1:-1;
+          const a=sc>=2?1:sc<=-2?-1:0;if(cd[i+h]===S)continue;sig.push({a,up:cd[i+h]>S});
+        }
+        res.push(abtStats(sig,lab,h));
+      }
+      spanTxt.push(`Tage: ${new Date(dk[0].t*1000).toLocaleDateString('de-DE')} – ${new Date(dk[dk.length-1].t*1000).toLocaleDateString('de-DE')} (${dk.length} Kerzen)`);
+    }
+    if(!res.length){tb.innerHTML='<tr><td colspan="5">Zu wenig Daten für einen Backtest.</td></tr>';return}
+    const P=x=>x==null?'–':Math.round(x*100)+' %';
+    tb.innerHTML=res.map(r=>{
+      if(!r.n)return`<tr><td>${r.lab}</td><td>0 <span class="m">(🟡 ${r.y})</span></td><td>–</td><td>–</td><td>–</td></tr>`;
+      const v=r.neff<20?['zu wenig Daten','']:r.z>=2?['✓ besser als Zufall','up']:r.z<=-2?['✗ schlechter als Zufall','dn']:['≈ Zufall',''];
+      return`<tr><td>${r.lab}</td><td>${r.n}<br><span class="m">(🟡 ${r.y}) · unabh. ${r.neff}</span></td><td class="${r.hit>=r.exp?'up':'dn'}">${P(r.hit)}<br><span class="m">Zufall ${P(r.exp)}</span></td><td>${P(r.gu)} · ${P(r.rd)}<br><span class="m">n=${r.ng} · ${r.nr}</span></td><td class="${v[1]}">${v[0]}</td></tr>`;
+    }).join('');
+    info.textContent=`${pair}: ${spanTxt.join(' · ')}. Gerechnet am ${new Date().toLocaleString('de-DE')}.`;
+    $('abtLabel').textContent='AMPEL-BACKTEST · '+pair;
+  }catch(e){tb.innerHTML=`<tr><td colspan="5">Backtest nicht möglich (${e.message})</td></tr>`}
+  finally{abtBusy=false;btn.disabled=false;btn.textContent='Neu berechnen'}
+}
+$('abtRun').onclick=ampelBacktest;
 // ---------- Eigenes Depot (reale Bestände, nur Ansicht) ----------
 const DKEY='btcdepot';
 let DP=(()=>{try{return JSON.parse(localStorage.getItem(DKEY)||'null')}catch(e){return null}})()||{ccy:'EUR',btc:{q:'',c:''},xau:{q:'',c:''},xag:{q:'',c:''},cash:''};

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.6.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.7.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -356,7 +356,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.6.0';
+const VERSION='v3.7.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -1960,25 +1960,31 @@ async function ampelBacktest(){
     }
     // --- Szenarien-Check (gleiche Formeln wie renderScen) ---
     const scb=[];
-    const scenAt=(sS,sL,mw,hh,perDay)=>{const w=Math.exp(-(hh/perDay)/60),sd=Math.sqrt(w*sS*sS+(1-w)*sL*sL),mu0=Math.max(-.15*sd,Math.min(.15*sd,.3*mw/perDay)),mu=mu0*hh,sg=sd*Math.sqrt(hh),th=.5*sg;
-      const zb=(-th-mu)/sg,za=(th-mu)/sg;return{pB:cdf(zb),pS:cdf(za)-cdf(zb),pU:1-cdf(za),th,lo:mu-1.2816*sg,hi:mu+1.2816*sg}};
+    const scenAt=(sS,sL,mw,hh,perDay,U,a,b)=>{const w=Math.exp(-(hh/perDay)/60),sd=Math.sqrt(w*sS*sS+(1-w)*sL*sL),mu0=Math.max(-.15*sd,Math.min(.15*sd,.3*mw/perDay)),mu=mu0*hh,sg=sd*Math.sqrt(hh),th=.5*sg;
+      const zb=(-th-mu)/sg,za=(th-mu)/sg;let G=cdf;
+      if(U&&b-a>=SCEN_EMP_MIN*hh){let nb=0,na=0,m=0;for(let k=a;k<b;k++){const u=U[k];if(!isFinite(u))continue;m++;if(u<=zb)nb++;if(u<=za)na++}if(m>=SCEN_EMP_MIN*hh){const pB=nb/m,pA=na/m;return{pB,pS:pA-pB,pU:1-pA,th,lo:mu-1.2816*sg,hi:mu+1.2816*sg,emp:1}}}
+      return{pB:G(zb),pS:G(za)-G(zb),pU:1-G(za),th,lo:mu-1.2816*sg,hi:mu+1.2816*sg}};
     const scAgg=(lab,rows,step)=>{const n=rows.length;if(!n)return{lab,n:0};const m=k=>rows.reduce((s,r)=>s+r[k],0)/n;
       return{lab,n,neff:Math.max(1,Math.floor(n/Math.max(1,step))),U:[m('aU'),m('pU')],S:[m('aS'),m('pS')],B:[m('aB'),m('pB')],band:m('inb')}};
     if(cd.length>=260&&dStat){
       // 4 Stunden aus Stundenkerzen, Langfrist-Schwankung vom passenden Tag
       if(ch.length>=300){
-        const c=ch.map(x=>x.c),sH=abtEwma(c),rows=[];let di=0;
+        const c=ch.map(x=>x.c),sH=abtEwma(c),rows=[];let di=0;const dIdx=new Int32Array(c.length).fill(-1);
+        for(let i=0;i<c.length;i++){while(di+1<dk.length&&dk[di+1].t<=ch[i].t-86400)di++;if(dStat[di])dIdx[i]=di}
+        const UH=new Float64Array(c.length).fill(NaN);for(let k=12;k+4<c.length;k++)if(dIdx[k]>=0){const st=dStat[dIdx[k]];UH[k]=scenU(c,sH,()=>st.sL/Math.sqrt(24),()=>st.mw,4,24,k)}
         for(let i=100;i+4<c.length;i++){
-          while(di+1<dk.length&&dk[di+1].t<=ch[i].t-86400)di++;const st=dStat[di];if(!st)continue;
-          const s=scenAt(sH[i],st.sL/Math.sqrt(24),st.mw,4,24),r=Math.log(c[i+4]/c[i]);
+          if(dIdx[i]<0)continue;const st=dStat[dIdx[i]];
+          const s=scenAt(sH[i],st.sL/Math.sqrt(24),st.mw,4,24,UH,Math.max(12,i-2392),i-4+1),r=Math.log(c[i+4]/c[i]);
           rows.push({pU:s.pU,pS:s.pS,pB:s.pB,aU:r>s.th?1:0,aB:r<-s.th?1:0,aS:Math.abs(r)<=s.th?1:0,inb:r>=s.lo&&r<=s.hi?1:0});
         }
         scb.push(scAgg('1–4 Stunden',rows,4));
       }
+      const sSd=abtEwma(cd);
       for(const [lab,hd] of [['1–7 Tage',7],['1–4 Wochen',28],['1–6 Monate',182],['6–12 Monate',365]]){
-        const rows=[];
+        const rows=[],UD=new Float64Array(cd.length).fill(NaN),emp=hd<=28;
+        if(emp)for(let k=230;k+hd<cd.length;k++){const st=dStat[k];if(st)UD[k]=scenU(cd,sSd,()=>st.sL,()=>st.mw,hd,1,k)}
         for(let i=230;i+hd<cd.length;i++){const st=dStat[i];if(!st)continue;
-          const s=scenAt(st.sS,st.sL,st.mw,hd,1),r=Math.log(cd[i+hd]/cd[i]);
+          const s=scenAt(st.sS,st.sL,st.mw,hd,1,emp?UD:null,Math.max(230,i-1196),i-hd+1),r=Math.log(cd[i+hd]/cd[i]);
           rows.push({pU:s.pU,pS:s.pS,pB:s.pB,aU:r>s.th?1:0,aB:r<-s.th?1:0,aS:Math.abs(r)<=s.th?1:0,inb:r>=s.lo&&r<=s.hi?1:0});
         }
         scb.push(scAgg(lab,rows,hd));
@@ -2399,17 +2405,28 @@ function mkRender(){
 
 let LF=null;
 function invPhi(p){let lo=-8,hi=8;for(let k=0;k<60;k++){const m=(lo+hi)/2;cdf(m)<p?lo=m:hi=m}return(lo+hi)/2}
+// v3.7: Szenario-Wahrscheinlichkeiten aus den echten, standardisierten Kursbewegungen statt Glockenkurve
+function scenU(c,sEw,sLk,mwk,h,perDay,k){ // standardisierte h-Rendite ab Index k (mit damals bekanntem Modell)
+  const sS=sEw[k],sL=sLk(k),mw=mwk(k);if(!(sS>0)||!(sL>0))return NaN;
+  const w=Math.exp(-(h/perDay)/60),sd=Math.sqrt(w*sS*sS+(1-w)*sL*sL),mu0=Math.max(-.15*sd,Math.min(.15*sd,.3*mw/perDay));
+  return(Math.log(c[k+h]/c[k])-mu0*h)/(sd*Math.sqrt(h));
+}
+function empF(us){const n=us.length;return x=>{let k=0;for(let i=0;i<n;i++)if(us[i]<=x)k++;return k/n}}
+const SCEN_EMP_MIN=30; // mind. 30 unabhängige Zeiträume, sonst Glockenkurve
 function renderScen(){
   const el=$('scenBox');if(!el||!LF)return;const {S,sShort,sLong,mw,cd,cw,ch,sH}=LF,dec=S<500?2:0,mean=a=>a.reduce((x,y)=>x+y,0)/a.length;let SIG=3;
   const rs=v=>{if(!(v>0))return v;const e=Math.pow(10,Math.floor(Math.log10(v))-(SIG-1));return Math.round(v/e)*e},px=v=>fmt(rs(v),dec);
-  const card=(title,sub,h,lv,sS=sShort,sL=sLong,perDay=1)=>{
+  const empFor=(c,sEw,sL,h,perDay)=>{if(!c||!sEw)return null;const us=[];for(let k=12;k+h<c.length;k++){const u=scenU(c,sEw,()=>sL,()=>mw,h,perDay,k);if(isFinite(u))us.push(u)}return us.length/h>=SCEN_EMP_MIN?empF(us):null};
+  const ewD=abtEwma(cd),ewH=ch&&ch.length>50?abtEwma(ch):null;let nEmp=0;
+  const card=(title,sub,h,lv,sS=sShort,sL=sLong,perDay=1,src=null)=>{
     const w=Math.exp(-(h/perDay)/60),sd=Math.sqrt(w*sS*sS+(1-w)*sL*sL),mu0=Math.max(-.15*sd,Math.min(.15*sd,.3*mw/perDay)),mu=mu0*h,sg=sd*Math.sqrt(h),th=.5*sg;SIG=th<.02?4:3;
-    const zb=(-th-mu)/sg,za=(th-mu)/sg,pB=cdf(zb),pS=cdf(za)-cdf(zb),pU=1-cdf(za);
+    const zb=(-th-mu)/sg,za=(th-mu)/sg,F=src?empFor(src[0],src[1],sL,h,perDay):null,G=F||cdf;if(F)nEmp++;
+    const pB=G(zb),pS=G(za)-G(zb),pU=1-G(za);
     let a=Math.round(pU*100),b=Math.round(pS*100),c=100-a-b;
     const cq=(lo,hi,q)=>S*Math.exp(mu+sg*invPhi(cdf(lo)+q*(cdf(hi)-cdf(lo))));
     const up=S*Math.exp(th),dn=S*Math.exp(-th),bullHi=cq(za,8,.8),bearLo=cq(-8,zb,.2),pct=(th>=.01?Math.round(th*1000)/10:Math.round(th*10000)/100).toString().replace('.',',');
     const bar=(lab,pc,col,rng,txt)=>`<div style="margin:10px 0 4px"><b>${lab} ${pc} %</b></div><div style="height:10px;border-radius:99px;background:var(--line)"><div style="height:10px;border-radius:99px;width:${pc}%;background:${col}"></div></div><div style="margin-top:4px">${rng}</div><div class="m" style="margin-top:2px">${txt}</div>`;
-    return`<div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px"><div style="font-size:17px;font-weight:700">${title}</div><div class="m">${sub}</div>
+    return`<div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px"><div style="font-size:17px;font-weight:700">${title}</div><div class="m">${sub}${F?' · aus echten Kursbewegungen':' · Glockenkurve (zu wenig Daten)'}</div>
       ${bar('Bullisch',a,'var(--up)',`${px(up)}–${px(bullHi)}`,`Kurs steigt um mehr als ${pct} %.`)}
       ${bar('Seitwärts',b,'#b58b2a',`${px(dn)}–${px(up)}`,`Kurs bleibt innerhalb von ±${pct} % des heutigen Kurses.`)}
       ${bar('Bärisch',c,'var(--dn)',`${px(bearLo)}–${px(dn)}`,`Kurs fällt um mehr als ${pct} %.`)}
@@ -2424,7 +2441,7 @@ function renderScen(){
   const hi7=Math.max(...cd.slice(-7)),lo7=Math.min(...cd.slice(-7)),s10=cd.length>=10?mean(cd.slice(-10)):null;
   SIG=4;const lh=hiH==null?'':`<b>Bestätigung Aufwärtsbild:</b> Stundenschluss über ${px(hiH)} (24-Std-Hoch).<br><b>Bestätigung Abwärtsbild:</b> mehrere Stundenschlüsse unter ${px(loH)} (24-Std-Tief).<br><span class="m">Kurs liegt ${S>sH24?'über':'unter'} dem 24-Std-Durchschnitt (${px(sH24)}).</span>`;
   const ld=`<b>Bestätigung Aufwärtsbild:</b> Tagesschluss über ${px(hi7)} (7-Tage-Hoch).<br><b>Bestätigung Abwärtsbild:</b> mehrere Schlusskurse unter ${px(lo7)} (7-Tage-Tief).${s10?`<br><span class="m">Kurs liegt ${S>s10?'über':'unter'} der 10-Tage-Linie (${px(s10)}).</span>`:''}`;
-  el.innerHTML=(sH&&lh?card('1–4 Stunden','gerechnet auf 4 Stunden',4,lh,sH,sLong/Math.sqrt(24),24):'')+card('1–7 Tage','gerechnet auf 7 Tage',7,ld)+card('1–4 Wochen','gerechnet auf 4 Wochen',28,l1)+card('1–6 Monate','gerechnet auf 6 Monate',182,l6)+card('6–12 Monate','gerechnet auf 12 Monate',365,l2)+`<div class="note" style="margin-top:10px">Wahrscheinlichkeiten aus dem Modell (aktuelle Schwankung, die zur langfristigen zurückkehrt, plus stark gedämpfter historischer Trend). „Seitwärts" heißt: innerhalb ±0,5 Standardabweichungen des Horizonts. Die Bereiche zeigen jeweils, wo der Kurs im jeweiligen Szenario typischerweise landet (die Mitte von 80 %). Das ist keine Vorhersage und keine Anlageberatung.</div>`;
+  el.innerHTML=(sH&&lh?card('1–4 Stunden','gerechnet auf 4 Stunden',4,lh,sH,sLong/Math.sqrt(24),24,ewH?[ch,ewH]:null):'')+card('1–7 Tage','gerechnet auf 7 Tage',7,ld,sShort,sLong,1,[cd,ewD])+card('1–4 Wochen','gerechnet auf 4 Wochen',28,l1,sShort,sLong,1,[cd,ewD])+card('1–6 Monate','gerechnet auf 6 Monate',182,l6)+card('6–12 Monate','gerechnet auf 12 Monate',365,l2)+`<div class="note" style="margin-top:10px">Wahrscheinlichkeiten aus der aktuellen Schwankung (kehrt mit der Zeit zur langfristigen zurück) plus stark gedämpftem Trend. Bis 4 Wochen wird die Form aus den echten vergangenen Kursbewegungen genommen: Bitcoin bewegt sich meist wenig und manchmal extrem, deshalb ist „Seitwärts" häufiger als bei einer Glockenkurve. Für 6 und 12 Monate gibt es dafür zu wenige unabhängige Zeiträume, dort gilt weiter die Glockenkurve. „Seitwärts" heißt: innerhalb ±0,5 Standardabweichungen des Horizonts. Die Bereiche zeigen jeweils, wo der Kurs im jeweiligen Szenario typischerweise landet (die Mitte von 80 %). Das ist keine Vorhersage und keine Anlageberatung.</div>`;
   $('scenLabel').textContent='SZENARIEN · '+pair;
 }
 function fullNote(){const n=$('fullNote');if(!n)return;if(!acct.cfg.full){n.style.display='none';return}const inv=+acct.cfg.inv||0,lev=+$('lev').value||1;n.style.display='block';n.innerHTML=`⚠ Voller Einsatz: Der Bot setzt je Trade ${fmt(inv,0)} Margin × ${lev}× Hebel = ${fmt(inv*lev,0)} Positionsgröße ein. Bei 1 % Kursbewegung gegen dich ≈ ${fmt(inv*lev*.01,0)}, bei 3 % ≈ ${fmt(inv*lev*.03,0)} Verlust – das kann über dem Verlustlimit (${fmt(acct.cfg.mxl,0)}) liegen. Das Limit schließt die Position erst beim nächsten Check (ca. alle 2 s), bei schnellen Kursen mit Überschreitung. Nur Simulation.`}

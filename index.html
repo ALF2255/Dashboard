@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.5.1 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.6.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -116,6 +116,14 @@ label.f{display:block}
   <div class="m" style="margin-top:14px">SZENARIEN-CHECK</div>
   <table><thead><tr><th>HORIZONT</th><th>BULLISCH</th><th>SEITWÄRTS</th><th>BÄRISCH</th><th>80 %-BAND</th></tr></thead><tbody id="scbTb"></tbody></table>
   <div class="note" style="margin-top:8px"><b>So liest du es:</b> Für jeden vergangenen Zeitpunkt rechnet der Test die Szenario-Wahrscheinlichkeiten so, wie die Karte „Szenarien" sie damals gezeigt hätte, und schaut, welches Szenario wirklich eingetreten ist. Oben steht, wie oft es <b>wirklich</b> so kam, darunter der Durchschnitt, den das <b>Modell</b> angegeben hat. Liegen beide nah beieinander, stimmen die Prozente. „80 %-Band" sollte bei etwa 80 % liegen. Grün = passt, rot = weicht deutlich ab (mehr als 4 Prozentpunkte und mehr als der Zufall erklärt).</div>
+</div>
+
+<div class="card" id="labCard">
+  <div class="row"><div class="m" id="labLabel">PROGNOSE-LABOR · STUNDEN, TAGE, MONATE</div><button id="labRun" style="padding:8px 12px">Labor starten</button></div>
+  <div class="note" id="labInfo" style="margin:6px 0">Testet bekannte Signal-Ideen ehrlich an der Vergangenheit: Jedes Signal wird an jedem Zeitpunkt nur mit damals bekannten Daten berechnet und mit dem Kurs nach Ablauf des Horizonts verglichen. Lädt einmalig ca. 1 Jahr Stundenkerzen und die Tageshistorie (ca. 20–60 Sekunden).</div>
+  <div id="labSum" style="margin:8px 0"></div>
+  <table><thead><tr><th>SIGNAL · HORIZONT</th><th>TREFFER</th><th>UNABH.</th><th>JETZT</th><th>URTEIL</th></tr></thead><tbody id="labTb"></tbody></table>
+  <div class="note" style="margin-top:8px"><b>So liest du es:</b> „Treffer" = wie oft die Richtung des Signals stimmte, darunter die Quote eines Zufallssignals mit gleich vielen ↑ und ↓. „Unabh." = Zahl der Signale, deren Zeiträume sich nicht überlappen. „Jetzt" = was das Signal heute sagt (↑ steigt, ↓ fällt, – kein Signal). „✗ Zufall" heißt: nicht verlässlich besser als Zufall. „Zu wenig" heißt: unter 30 unabhängige Fälle. <b>Bestanden</b> heißt: mindestens 30 unabhängige Fälle, deutlich besser als Zufall (t ≥ 2,5, dieselbe strenge Schwelle wie beim Bot) <b>und</b> in der ersten und der zweiten Hälfte des Testzeitraums jeweils besser als Zufall. Weil viele Ideen gleichzeitig getestet werden, kann trotzdem einmal eine nur zufällig bestehen. Bestandene Signale sind ein Hinweis, keine Garantie und keine Anlageberatung.</div>
 </div>
 
 <div class="card" id="rbCard">
@@ -348,7 +356,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.5.1';
+const VERSION='v3.6.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -1996,6 +2004,113 @@ async function ampelBacktest(){
   finally{abtBusy=false;btn.disabled=false;btn.textContent='Neu berechnen'}
 }
 $('abtRun').onclick=ampelBacktest;
+// ---------- Prognose-Labor (v3.6) ----------
+// Testet Signal-Ideen auf Stunden-, Tages- und Monatsebene. Kein Blick in die Zukunft: Signal an Index i nutzt nur Daten bis i.
+let labBusy=false;
+async function labFetchH(pages){ // ca. 1 Jahr Stundenkerzen (Coinbase), sonst kurze Historie
+  if(useBn())return fetchTf('1h');
+  let end=Date.now(),out=[];
+  for(let p=0;p<pages;p++){
+    const start=end-299*3600e3;if(p)await new Promise(r=>setTimeout(r,150));
+    const rows=await j(`https://api.exchange.coinbase.com/products/${prod()}/candles?granularity=3600&start=${new Date(start).toISOString()}&end=${new Date(end).toISOString()}`);
+    if(!rows.length&&p>2)break;out=out.concat(rows);end=start-3600e3;
+    $('labTb').innerHTML=`<tr><td colspan="5">Lade Stundenkerzen: ${p+1}/${pages}…</td></tr>`;
+  }
+  const m=new Map();out.forEach(x=>m.set(x[0],{t:x[0],o:x[3],h:x[2],l:x[1],c:x[4],v:x[5]}));
+  return[...m.values()].sort((a,b)=>a.t-b.t);
+}
+function labRsi(c,n=14){const out=new Float64Array(c.length).fill(NaN);if(c.length<=n)return out;let g=0,l=0;
+  for(let i=1;i<=n;i++){const d=c[i]-c[i-1];if(d>0)g+=d;else l-=d}g/=n;l/=n;out[n]=l?100-100/(1+g/l):100;
+  for(let i=n+1;i<c.length;i++){const d=c[i]-c[i-1];g=(g*(n-1)+Math.max(d,0))/n;l=(l*(n-1)+Math.max(-d,0))/n;out[i]=l?100-100/(1+g/l):100}return out}
+function labZret(c){ // Rendite der letzten Kerze in Einheiten der vorherigen EWMA-Schwankung
+  const s=abtEwma(c),z=new Float64Array(c.length).fill(NaN);for(let i=12;i<c.length;i++){const sd=s[i-1];if(sd>0)z[i]=Math.log(c[i]/c[i-1])/sd}return z}
+function labFundMap(cs,dt){ // Funding-z je Kerze, nur bereits abgerechnete Werte
+  const out=new Float64Array(cs.length).fill(NaN);if(!FUND||!FUND.d.length||FUND.sym!==fundSym())return out;
+  const F=FUND.d;let k=-1;for(let i=0;i<cs.length;i++){const tc=cs[i].t+dt;while(k+1<F.length&&F[k+1].t<=tc)k++;
+    if(k>=0&&cs[i].t-F[k].t<2*86400&&FUND.z[k]!=null)out[i]=FUND.z[k]}return out}
+function labEval(c,sigArr,hz,i0){
+  const ev=[];for(let i=i0;i+hz<c.length;i++){const a=sigArr[i];if(!a)continue;const r=c[i+hz]/c[i]-1;if(r===0)continue;ev.push({i,a,up:r>0})}
+  const allUp=[];for(let i=i0;i+hz<c.length;i++)if(sigArr[i]!==undefined)allUp.push(c[i+hz]>c[i]);
+  const n=ev.length;if(!n)return{n:0,neff:0};
+  const pUp=allUp.filter(Boolean).length/Math.max(1,allUp.length);
+  const part=e=>{const m=e.length;if(!m)return{hit:0,exp:.5,m:0};const hit=e.filter(x=>(x.a>0)===x.up).length/m,pg=e.filter(x=>x.a>0).length/m;return{hit,exp:pg*pUp+(1-pg)*(1-pUp),m}};
+  let neff=0,lastI=-1e9;ev.forEach(x=>{if(x.i>=lastI+hz){neff++;lastI=x.i}});
+  const all=part(ev),mid=Math.floor((i0+c.length-hz)/2),A=part(ev.filter(x=>x.i<mid)),B=part(ev.filter(x=>x.i>=mid));
+  const z=(all.hit-all.exp)/Math.sqrt(Math.max(1e-9,all.exp*(1-all.exp))/Math.max(1,neff));
+  const pass=neff>=30&&z>=2.5&&A.m>0&&B.m>0&&A.hit>A.exp&&B.hit>B.exp;
+  return{n,neff,hit:all.hit,exp:all.exp,z,pass,halves:[A.hit-A.exp,B.hit-B.exp]};
+}
+async function labRun(){
+  if(labBusy)return;labBusy=true;const btn=$('labRun'),tb=$('labTb');btn.disabled=true;btn.textContent='läuft…';$('labSum').innerHTML='';
+  try{
+    const isBtc=pair.startsWith('BTC-');try{await loadFunding()}catch(_){}
+    const hk=await labFetchH(26),dk=await fetchTfBT('1d');
+    tb.innerHTML='<tr><td colspan="5">Rechne…</td></tr>';await new Promise(r=>setTimeout(r,30));
+    const ch=hk.map(x=>x.c),cd=dk.map(x=>x.c),tests=[];
+    const add=(grp,name,c,arr,hzs,i0,unit)=>hzs.forEach(([hl,hz])=>tests.push({grp,name,hl,unit,res:labEval(c,arr,hz,i0),now:arr[c.length-1]||0}));
+    // --- Stunden ---
+    if(ch.length>=500){
+      const n=ch.length,zr=labZret(ch),rs=labRsi(ch),fz=labFundMap(hk,3600);
+      const sRev=new Array(n),sRsi=new Array(n),sMom=new Array(n),sF=new Array(n);
+      for(let i=0;i<n;i++){
+        sRev[i]=isNaN(zr[i])?undefined:zr[i]>2.5?-1:zr[i]<-2.5?1:0;
+        sRsi[i]=isNaN(rs[i])?undefined:rs[i]<25?1:rs[i]>75?-1:0;
+        sMom[i]=i<24?undefined:ch[i]>ch[i-24]?1:-1;
+        sF[i]=isNaN(fz[i])?undefined:fz[i]>=2?-1:fz[i]<=-2?1:0;
+      }
+      add('Stunden','Übertreibung (Stunde) → Gegenbewegung',ch,sRev,[['1 Std',1],['4 Std',4],['24 Std',24]],50,'h');
+      add('Stunden','RSI 14 (Stunde) unter 25 / über 75',ch,sRsi,[['4 Std',4],['24 Std',24]],50,'h');
+      add('Stunden','Trend der letzten 24 Std hält an',ch,sMom,[['4 Std',4],['24 Std',24]],50,'h');
+      if(fundSym())add('Stunden','Funding-Extrem → Gegenbewegung',ch,sF,[['24 Std',24]],50,'h');
+    }
+    // --- Tage ---
+    if(cd.length>=400){
+      const n=cd.length,zr=labZret(cd),rs=labRsi(cd),fz=labFundMap(dk,86400);
+      const sRev=new Array(n),sRsi=new Array(n),sMom=new Array(n),sF=new Array(n);
+      for(let i=0;i<n;i++){
+        sRev[i]=isNaN(zr[i])?undefined:zr[i]>2.5?-1:zr[i]<-2.5?1:0;
+        sRsi[i]=isNaN(rs[i])?undefined:rs[i]<30?1:rs[i]>70?-1:0;
+        sMom[i]=i<28?undefined:cd[i]>cd[i-28]?1:-1;
+        sF[i]=isNaN(fz[i])?undefined:fz[i]>=2?-1:fz[i]<=-2?1:0;
+      }
+      add('Tage','Übertreibung (Tag) → Gegenbewegung',cd,sRev,[['7 Tage',7]],30,'d');
+      add('Tage','RSI 14 (Tag) unter 30 / über 70',cd,sRsi,[['7 Tage',7],['4 Wochen',28]],30,'d');
+      add('Tage','Trend der letzten 4 Wochen hält an',cd,sMom,[['7 Tage',7],['4 Wochen',28]],30,'d');
+      if(fundSym())add('Tage','Funding-Extrem → Gegenbewegung',cd,sF,[['7 Tage',7]],30,'d');
+      // --- Monate ---
+      const pre=new Float64Array(n+1);cd.forEach((v,i)=>pre[i+1]=pre[i]+v);
+      const sSma=new Array(n),sMay=new Array(n),sM12=new Array(n),sRb=new Array(n);
+      for(let i=0;i<n;i++){
+        if(i>=199){const sma=(pre[i+1]-pre[i-199])/200,mm=cd[i]/sma;sSma[i]=cd[i]>sma?1:-1;sMay[i]=mm<.8?1:mm>2?-1:0}
+        if(i>=365)sM12[i]=cd[i]>cd[i-365]?1:-1;
+      }
+      if(isBtc){ // Regenbogen nur mit damals bekannten Kursen angepasst (wachsende Regression)
+        const X=dk.map(q=>Math.log10((q.t-RB_GEN)/86400)),Y=cd.map(v=>Math.log10(v));let sx=0,sy=0,sxx=0,sxy=0;
+        for(let i=0;i<n;i++){sx+=X[i];sy+=Y[i];sxx+=X[i]*X[i];sxy+=X[i]*Y[i];const m=i+1;
+          if(m<730)continue;const b=(m*sxy-sx*sy)/(m*sxx-sx*sx),a=(sy-b*sx)/m,r0=Y[i]-(a+b*X[i]);let below=0;
+          for(let k=0;k<i;k++)if(Y[k]-(a+b*X[k])<r0)below++;const pct=below/i;sRb[i]=pct<.2?1:pct>.8?-1:0}
+      }
+      const mh=[['3 Monate',91],['6 Monate',182],['12 Monate',365]];
+      add('Monate','Über / unter der 200-Tage-Linie',cd,sSma,mh,200,'d');
+      add('Monate','200-Tage-Linie stark über-/unterschritten (Mayer < 0,8 / > 2)',cd,sMay,mh,200,'d');
+      add('Monate','Trend der letzten 12 Monate hält an',cd,sM12,mh,365,'d');
+      if(isBtc)add('Monate','Regenbogen: unteres / oberes Fünftel',cd,sRb,mh,730,'d');
+    }
+    if(!tests.length){tb.innerHTML='<tr><td colspan="5">Zu wenig Daten für das Labor.</td></tr>';return}
+    const P=x=>Math.round(x*100)+' %',arrow=a=>a>0?'<b class="up">↑</b>':a<0?'<b class="dn">↓</b>':'–';let grp='';
+    tb.innerHTML=tests.map(t=>{const r=t.res,head=t.grp!==grp?(grp=t.grp,`<tr><td colspan="5" class="m" style="padding-top:12px"><b>${t.grp.toUpperCase()}</b></td></tr>`):'';
+      if(!r.n)return head+`<tr><td>${t.name}<br><span class="m">${t.hl}</span></td><td colspan="2">keine Signale</td><td>${arrow(t.now)}</td><td>–</td></tr>`;
+      const v=r.neff<30?['zu wenig','']:r.pass?['✓ bestanden','up']:['✗ Zufall','dn'];
+      return head+`<tr><td>${t.name}<br><span class="m">${t.hl}</span></td><td class="${r.hit>=r.exp?'up':'dn'}">${P(r.hit)}<br><span class="m" style="white-space:nowrap">Zufall ${P(r.exp)}</span></td><td>${r.neff}<br><span class="m" style="white-space:nowrap">von ${r.n}</span></td><td>${arrow(t.now)}</td><td class="${v[1]}" style="white-space:nowrap">${v[0]}</td></tr>`}).join('');
+    const ok=tests.filter(t=>t.res.pass),act=ok.filter(t=>t.now);
+    $('labSum').innerHTML=`<div class="kv"><span>BESTANDEN</span><b class="${ok.length?'up':''}">${ok.length} von ${tests.length} Tests</b></div>`+
+      (act.length?`<div class="kv"><span>AKTIV JETZT</span><b>${act.map(t=>`${t.name} (${t.hl}): ${t.now>0?'↑':'↓'}`).join('<br>')}</b></div>`:`<div class="kv"><span>AKTIV JETZT</span><b>${ok.length?'kein bestandenes Signal aktiv':'–'}</b></div>`);
+    $('labInfo').textContent=`${pair}: Stunden ${hk.length?new Date(hk[0].t*1000).toLocaleDateString('de-DE'):'–'} – heute (${hk.length} Kerzen) · Tage ${new Date(dk[0].t*1000).toLocaleDateString('de-DE')} – heute (${dk.length} Kerzen)${fundSym()&&FUND&&FUND.d.length?' · Funding ab '+new Date(FUND.d[0].t*1000).toLocaleDateString('de-DE'):''}. Gerechnet am ${new Date().toLocaleString('de-DE')}.`;
+    $('labLabel').textContent='PROGNOSE-LABOR · '+pair;
+  }catch(e){tb.innerHTML=`<tr><td colspan="5">Labor nicht möglich (${e.message})</td></tr>`}
+  finally{labBusy=false;btn.disabled=false;btn.textContent='Neu berechnen'}
+}
+$('labRun').onclick=labRun;
 // ---------- Eigenes Depot (reale Bestände, nur Ansicht) ----------
 const DKEY='btcdepot';
 let DP=(()=>{try{return JSON.parse(localStorage.getItem(DKEY)||'null')}catch(e){return null}})()||{ccy:'EUR',btc:{q:'',c:''},xau:{q:'',c:''},xag:{q:'',c:''},cash:''};

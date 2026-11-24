@@ -20,6 +20,7 @@ Live-Dashboard für Bitcoin (und ETH, ZEC, Gold, Silber) mit Chart, Analyse, Zon
 - **Ampel-Backtest** (ab v3.5): prüft die Ampel der Langfrist-Prognose rückwirkend an der ganzen Historie und vergleicht sie mit einem Zufallssignal; prüft außerdem, ob die Szenario-Prozente (bullisch/seitwärts/bärisch) und das 80 %-Band in der Vergangenheit gestimmt haben
 - **Szenarien aus echten Kursbewegungen** (ab v3.7): bis 4 Wochen werden Bullisch/Seitwärts/Bärisch aus der Verteilung der vergangenen, standardisierten Kursbewegungen berechnet statt aus einer Glockenkurve (Bitcoin bewegt sich meist wenig und manchmal extrem); 6 und 12 Monate weiter mit Glockenkurve
 - **Szenarien im Chart** (ab v3.8): Schalter „Szenarien“ zeichnet Bullisch/Seitwärts/Bärisch mit Wahrscheinlichkeit und Bestätigungsmarken in den Chart; Horizont wählbar (passend zur Zeiteinheit, 4 Std, 7 Tage, 4 Wochen)
+- **Nur Long** (ab v3.9): Schalter beim Auto-Trader – der Bot eröffnet keine Shorts; gilt gleich im Backtest, Walk-Forward und live, aus = Verhalten wie bisher
 - **Prognose-Labor** (ab v3.6): testet 26 Signal-Ideen auf Stunden-, Tages- und Monatsebene (Übertreibung, RSI, Trend, Funding, 200-Tage-Linie, Mayer-Multiple, Regenbogen) ohne Blick in die Zukunft; „bestanden“ nur bei t ≥ 2,5, mind. 30 unabhängigen Fällen und Vorteil in beiden Hälften des Testzeitraums
 - Bitcoin-Regenbogen als Langfrist-Bewertung (nur Anzeige)
 
@@ -40,7 +41,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.8.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.9.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|
@@ -52,6 +53,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.4.1 | Nur ein Tab je Browser handelt (weitere Tabs = Anzeige), Warnung wenn der Bot nirgends läuft, Rückfrage beim Umstellen des Hauptgeräts |
 | v3.4.2 | Klarere Warnung, wenn ein zweiter Tab/ein zweites Fenster desselben Browsers noch Hauptgerät ist |
 | v3.4.3 | Fehlerkorrektur: Hauptgerät stellte sich wegen zwischengespeicherter GitHub-Antworten fälschlich selbst auf „ansehen“ |
+| v3.9.0 | Schalter „Nur Long“ für den Auto-Trader (Backtest, Walk-Forward und live identisch) |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

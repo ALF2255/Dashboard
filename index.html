@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.8.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.9.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -244,6 +244,7 @@ label.f{display:block}
   <label class="m f" style="display:block;margin:4px 0"><input type="checkbox" id="fullStake"> Immer vollen Einsatz nutzen (Einsatz × Hebel, ohne Verlustdeckel pro Trade)</label>
   <label class="m f" style="display:block;margin:4px 0"><input type="checkbox" id="reStrat" checked> Strategie laufend neu bewerten (alle 30 Min., nur ohne offene Position)</label>
   <label class="m f" style="display:block;margin:4px 0"><input type="checkbox" id="useRegime" checked> Marktphasen-Filter (bullisch: keine Shorts · bärisch: keine Longs · seitwärts: kein Trend-/Ausbruchs-Handel)</label>
+  <label class="m f" style="display:block;margin:4px 0"><input type="checkbox" id="longOnly"> Nur Long (Bot eröffnet keine Shorts – gilt im Backtest, Walk-Forward und live; wirkt ab der nächsten Strategieberechnung)</label>
   <div class="note" style="margin:0 0 4px">Gilt im Backtest und live gleich. Phase je Kerze: Trendstärke (Efficiency Ratio, 30 Kerzen) unter 0,30 = seitwärts, sonst EMA26/EMA50 und Kurs zur EMA50. Änderung wirkt ab der nächsten Strategieberechnung.</div>
   <div id="fullNote" class="note" style="margin:4px 0;display:none"></div>
   <button id="planBtn" style="width:100%">Beste Strategie berechnen (Vorschau)</button>
@@ -358,7 +359,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.8.0';
+const VERSION='v3.9.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -1107,6 +1108,8 @@ const useReg=()=>acct.cfg.regime!==false;
 // Regel: bullisch → keine Shorts, bärisch → keine Longs, seitwärts → keine Trendfolge, uneinheitlich → alles erlaubt
 function regOK(st,ph,side){if(ph==='bull'&&side==='short')return false;if(ph==='bear'&&side==='long')return false;if(ph==='side'&&TRENDF[st])return false;return true}
 const canTrade=(st,ph)=>(SIDES[st]||['long','short']).some(sd=>regOK(st,ph,sd));
+// v3.9.0 „Nur Long“: Shorts gesperrt. lo = Schalter, ph = Phase oder null (Filter aus)
+const canTradeLO=(st,ph,lo)=>(SIDES[st]||['long','short']).filter(sd=>!lo||sd==='long').some(sd=>!ph||regOK(st,ph,sd));
 function regWhy(st,ph,side){return ph==='side'?`Marktphase seitwärts – ${STRATS[st].name} ist eine Trendfolge-Strategie`:`Marktphase ${PH_LAB[ph]} – ${side==='long'?'Longs':'Shorts'} gesperrt`}
 const STRATS={
  trend:{name:'Trend (EMA-Reclaim)',sig(x,i){
@@ -1168,13 +1171,14 @@ const STRATS={
    if(k.l<x.ll[i]&&p>x.ll[i]&&p>k.o&&x.er[i]<.3&&mid-p>a)return{side:'long',sl:k.l-.3*a,tp:mid};
    return null}}
 };
-function runBT(st,cs,reg){
+function runBT(st,cs,reg,lo){
   const x=precompute(cs),n=cs.length,MAXH=40,start=40,tr=[];let i=start,blocked=0;
   while(i<n-2){
     const s=STRATS[st].sig(x,i);if(!s){i++;continue}
     const e=x.c[i],L=s.side==='long',risk=Math.abs(e-s.sl)/e;
     if(!(risk>0)||(L?s.tp<=e||s.sl>=e:s.tp>=e||s.sl<=e)){i++;continue}
     if(costRatio(risk)>MAXCOST){i++;continue} // gleicher Kostenfilter wie im Live-Handel
+    if(lo&&s.side==='short'){i++;continue} // v3.9.0 Nur Long – gleich wie im Live-Handel
     if(reg&&!regOK(st,x.reg[i],s.side)){blocked++;i++;continue} // gleicher Marktphasen-Filter wie im Live-Handel
     let ex=null,j=i+1;
     for(;j<n&&j<=i+MAXH;j++){
@@ -1225,7 +1229,7 @@ function optimizeRisk(bt,step,inv,levMax,tgt,mxl,Tsec){
 async function computePlan(ov){
   if(planBusy)return null;planBusy=true;
   try{
-    const reg=useReg(),inv=Math.min(acct.cfg.inv,acct.cash),levMax=+$('lev').value||1,tgt=ov?ov.tgt:acct.cfg.tgt,mxl=ov?ov.mxl:acct.cfg.mxl,Tsec=ov?Math.max(60,ov.Tsec):Math.max(60,(acct.cfg.tmx>0?acct.cfg.tmx:1440)*60),rows=[],perTf={};
+    const reg=useReg(),lo=!!acct.cfg.longOnly,inv=Math.min(acct.cfg.inv,acct.cash),levMax=+$('lev').value||1,tgt=ov?ov.tgt:acct.cfg.tgt,mxl=ov?ov.mxl:acct.cfg.mxl,Tsec=ov?Math.max(60,ov.Tsec):Math.max(60,(acct.cfg.tmx>0?acct.cfg.tmx:1440)*60),rows=[],perTf={};
     if(!(inv>0&&tgt>0&&mxl>0)){$('stratBox').textContent='Bitte Einsatz, Ziel-Gewinn und Max. Verlust eingeben.';return null}
     $('stratBox').textContent='Lade Funding-Historie…';await loadFunding(); // schlägt das fehl, liefert „Funding-Extrem“ einfach keine Signale
     for(const t of TFS){
@@ -1233,7 +1237,7 @@ async function computePlan(ov){
       const cs=await fetchTfBT(t);stratData[t]={t:Date.now(),cs};const hist=cs.slice(0,-1);perTf[t]={btMap:{},n:hist.length,phase:phaseNow(hist.map(q=>q.c))};
       for(const st of Object.keys(STRATS)){
         await new Promise(r=>setTimeout(r,0));
-        const bt=runBT(st,hist,reg);if(!bt)continue;perTf[t].btMap[st]=bt;if(bt.N<8)continue;
+        const bt=runBT(st,hist,reg,lo);if(!bt)continue;perTf[t].btMap[st]=bt;if(bt.N<8)continue;
         rows.push({st,tf:t,bt,...optimizeRisk(bt,TF[t].step,inv,levMax,tgt,mxl,Tsec)});
       }
     }
@@ -1256,7 +1260,7 @@ async function computePlan(ov){
     if(valid.length){
       // mit Filter: nur Strategien, die in der aktuellen Phase überhaupt handeln dürfen (sonst wartet der Bot nur)
       const w=valid[0],ph=perTf[w.tf].phase,cand=rows.filter(r=>r.tf===w.tf).sort((a,b)=>b.bt.meanR-a.bt.meanR),
-        cur=(reg&&cand.find(r=>canTrade(r.st,ph)))||cand[0]||rows[0];
+        cur=((reg||lo)&&cand.find(r=>canTradeLO(r.st,reg?ph:null,lo)))||cand[0]||rows[0];
       plan={wf:true,strat:cur.st,tf:w.tf,riskUsd:w.riskUsd,lev:w.lev,pHit:w.pHit,pLoss:w.pLoss,pTime:w.pTime,ev:w.ev,ntr:w.ntr,N:w.wf.N,win:w.wf.win,meanR:w.wf.meanR,tVal:w.wf.t,
         edgeOK:w.ok,shrunk:w.shrunk,pHitRaw:w.pRaw,insPHit:cur.pHit,insMeanR:cur.bt.meanR,insN:cur.bt.N};
     }else{
@@ -1264,7 +1268,7 @@ async function computePlan(ov){
       plan={wf:false,strat:t.st,tf:t.tf,riskUsd:t.riskUsd,lev:t.lev,pHit:t.pHit,pLoss:t.pLoss,pTime:t.pTime,ev:t.ev,N:t.bt.N,win:t.bt.win,meanR:t.bt.meanR,oosR:t.bt.oosR,oosN:t.bt.oosN,
         edgeOK:false};
     }
-    {const b=perTf[plan.tf]&&perTf[plan.tf].btMap[plan.strat];plan.regime=reg;plan.phase=perTf[plan.tf]?perTf[plan.tf].phase:'mix';plan.blocked=b?b.blocked:0;plan.phaseOK=!reg||canTrade(plan.strat,plan.phase);
+    {const b=perTf[plan.tf]&&perTf[plan.tf].btMap[plan.strat];plan.regime=reg;plan.longOnly=lo;plan.phase=perTf[plan.tf]?perTf[plan.tf].phase:'mix';plan.blocked=b?b.blocked:0;plan.phaseOK=(!reg&&!lo)||canTradeLO(plan.strat,reg?plan.phase:null,lo);
      plan.phases=Object.fromEntries(TFS.filter(t=>perTf[t]).map(t=>[t,perTf[t].phase]));
      if(FUND&&FUND.d.length){const k=FUND.d.length-1;plan.funding={rate:FUND.d[k].r,z:FUND.z[k],n:FUND.d.length}}}
     plan.byTf=Object.fromEntries(wfRows.filter(r=>!r.none).map(r=>[r.tf,r.pHit]));
@@ -1295,6 +1299,7 @@ function showPlan(p,rows,wfRows){
     if(!p.phaseOK)t+=` ⚠ Keine der getesteten Strategien darf in dieser Phase handeln – der Bot wartet, bis die Phase wechselt.`;
     else if(p.phase==='bull'||p.phase==='bear')t+=` Erlaubt sind gerade nur ${p.phase==='bull'?'Longs':'Shorts'}.`;
   }else t+='<br>Marktphasen-Filter aus: Der Bot handelt in jeder Phase in beide Richtungen.';
+  if(p.longOnly)t+='<br><b>Nur Long</b> ist an: Backtest, Walk-Forward und Live-Handel ohne Shorts. Zum Vergleich Schalter aus, dann werden die Zahlen ohne Einschränkung neu berechnet.';
   if(p.pHit<.3)t+='<br>⚠ Das Ziel ist in diesem Zeitlimit unwahrscheinlich. Ein kleineres Ziel, mehr Zeit oder mehr Einsatz erhöhen die Chance.';
   $('stratBox').innerHTML=t;
   $('wfHead').style.display='block';$('isHead').style.display='block';
@@ -1323,7 +1328,7 @@ function botLevels(a){
     const zl=a.zn.long,zs=a.zn.short;
     return phaseGate({mode:'zone',tfx:tf,cs:a.cs,atr:a.zn.atr,name:`Zonen-Modus · ${tf}`,
       long:zl.used?{none:'Long-'+USED_LAB[zl.used]}:{zone:[zl.ent.lo,zl.ent.hi],sl:zl.sl,tp:zl.tps[0].mid,txt:'Kurs liegt in der Einstiegszone, Signal nicht bärisch (Score ≥ 0), Chance/Risiko ≥ 1,2'},
-      short:zs.used?{none:'Short-'+USED_LAB[zs.used]}:{zone:[zs.ent.lo,zs.ent.hi],sl:zs.sl,tp:zs.tps[0].mid,txt:'Kurs liegt in der Einstiegszone, Signal nicht bullisch (Score ≤ 0), Chance/Risiko ≥ 1,2'}},'zone',useReg()?phaseNow(a.c.slice(0,-1)):null);
+      short:zs.used?{none:'Short-'+USED_LAB[zs.used]}:{zone:[zs.ent.lo,zs.ent.hi],sl:zs.sl,tp:zs.tps[0].mid,txt:'Kurs liegt in der Einstiegszone, Signal nicht bullisch (Score ≤ 0), Chance/Risiko ≥ 1,2'}},'zone',useReg()?phaseNow(a.c.slice(0,-1)):null,acct.cfg.longOnly);
   }
   const cs=botTfData(P.tf,a);if(!cs||cs.length<70)return null;
   const key=pair+'|'+P.strat+'|'+P.tf+'|'+cs[cs.length-2].t;
@@ -1356,9 +1361,11 @@ function botLevels(a){
   }
   if(SIDES[P.strat]){const only=SIDES[P.strat][0],other=only==='long'?'short':'long';if(!lv[other]||!lv[other].none)lv[other]={none:`${STRATS[P.strat].name} handelt nur ${only==='long'?'Long':'Short'}`}}
   phaseGate(lv,P.strat,P.regime?x.reg[i]:null);
+  if(P.longOnly&&lv.short&&!lv.short.none)lv.short={none:'Gesperrt: „Nur Long“ ist an'};
   botLv=lv;botKey=key;return{...lv,cs};
 }
-function phaseGate(lv,st,ph){
+function phaseGate(lv,st,ph,lo){
+  if(lo&&lv.short&&!lv.short.none)lv.short={none:'Gesperrt: „Nur Long“ ist an'};
   lv.phase=ph;if(!ph)return lv;
   ['long','short'].forEach(sd=>{if(lv[sd]&&!lv[sd].none&&!regOK(st,ph,sd))lv[sd]={none:'Gesperrt: '+regWhy(st,ph,sd)}});
   return lv;
@@ -1730,6 +1737,10 @@ async function autoEntry(b){
   b.evalT=bt;b.status=`Läuft – ${STRATS[P.strat].name} · ${P.tf}: wartet auf Signal`;
   const x=precompute(cs.slice(0,n-1)),s=STRATS[P.strat].sig(x,i),ph=x.reg[i];
   if(!P.edgeOK&&!acct.cfg.noEdge){b.status=`Kein Handel: kein belegter Vorteil für ${STRATS[P.strat].name} · ${P.tf} (Walk-Forward Ø R ${P.meanR!=null?P.meanR.toFixed(2):'–'}). Bot beobachtet und bewertet alle 30 Min. neu.`;return}
+  if(P.longOnly){
+    if(!canTradeLO(P.strat,null,true)){b.status=`Wartet: ${STRATS[P.strat].name} handelt nur Short, „Nur Long“ ist an. Bot bewertet alle 30 Min. neu.`;return}
+    if(s&&s.side==='short'){b.status='Signal short verworfen: „Nur Long“ ist an';jlog('EVENT',{event:'SIGNAL_GESPERRT',text:b.status,data:JSON.stringify({run:b.runId,strat:P.strat,tf:P.tf,grund:'nur-long',side:'short',kerze:cs[i].t})});return}
+  }
   if(P.regime){
     if(!canTrade(P.strat,ph)){b.status=`Wartet: ${regWhy(P.strat,ph,(SIDES[P.strat]||['long'])[0])} (${P.tf}). Bot bewertet alle 30 Min. neu.`;return}
     b.status+=` · Phase ${PH_LAB[ph]}`;
@@ -1765,7 +1776,7 @@ async function botStep(){
   if(b.plan)return autoEntry(b);
   if(Date.now()-b.lastClose<60000){b.status='Abkühlphase nach dem letzten Trade…';return}
   const a=analyze();if(!a)return;
-  const ph=useReg()?phaseNow(a.c.slice(0,-1)):'mix',zl=a.zn.long,zs=a.zn.short,okL=zl.inZone&&a.score>=0&&zl.rr>=1.2&&regOK('zone',ph,'long'),okS=zs.inZone&&a.score<=0&&zs.rr>=1.2&&regOK('zone',ph,'short');
+  const ph=useReg()?phaseNow(a.c.slice(0,-1)):'mix',zl=a.zn.long,zs=a.zn.short,okL=zl.inZone&&a.score>=0&&zl.rr>=1.2&&regOK('zone',ph,'long'),okS=!acct.cfg.longOnly&&zs.inZone&&a.score<=0&&zs.rr>=1.2&&regOK('zone',ph,'short');
   b.status='Läuft – wartet auf Einstieg in einer Long-/Short-Zone'+(useReg()?` · Phase ${PH_LAB[ph]}${ph==='bull'?' (nur Long)':ph==='bear'?' (nur Short)':''}`:'');
   if(okL||okS){const sd=okL&&okS?(a.score>=0?'long':'short'):okL?'long':'short';openPos(sd,true,{src:'Bot',strat:'Zonen-Reversal',tf,reason:`Kurs in ${sd}-Zone, Signal-Score ${a.score}, R:R ${(sd==='long'?zl.rr:zs.rr).toFixed(2)}`})}
 }
@@ -2466,6 +2477,7 @@ function renderScen(){
   if(lastDrawA)try{draw(lastDrawA)}catch(_){}
 }
 function fullNote(){const n=$('fullNote');if(!n)return;if(!acct.cfg.full){n.style.display='none';return}const inv=+acct.cfg.inv||0,lev=+$('lev').value||1;n.style.display='block';n.innerHTML=`⚠ Voller Einsatz: Der Bot setzt je Trade ${fmt(inv,0)} Margin × ${lev}× Hebel = ${fmt(inv*lev,0)} Positionsgröße ein. Bei 1 % Kursbewegung gegen dich ≈ ${fmt(inv*lev*.01,0)}, bei 3 % ≈ ${fmt(inv*lev*.03,0)} Verlust – das kann über dem Verlustlimit (${fmt(acct.cfg.mxl,0)}) liegen. Das Limit schließt die Position erst beim nächsten Check (ca. alle 2 s), bei schnellen Kursen mit Überschreitung. Nur Simulation.`}
+$('longOnly').checked=!!acct.cfg.longOnly;$('longOnly').onchange=()=>{acct.cfg.longOnly=$('longOnly').checked;lastPlan=null;botKey='';save();render()};
 $('useRegime').checked=acct.cfg.regime!==false;$('useRegime').onchange=()=>{acct.cfg.regime=$('useRegime').checked;lastPlan=null;botKey='';save();render()};
 $('reStrat').checked=acct.cfg.reeval!==false;$('reStrat').onchange=()=>{acct.cfg.reeval=$('reStrat').checked;save()};
 $('noEdge').checked=!!acct.cfg.noEdge;$('noEdge').onchange=()=>{acct.cfg.noEdge=$('noEdge').checked;save();if(typeof render==='function')render()};

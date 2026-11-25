@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.9.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.10.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -145,6 +145,16 @@ label.f{display:block}
 <div class="card">
   <div class="m" id="scenLabel">SZENARIEN</div>
   <div id="scenBox"><div class="note">lädt…</div></div>
+</div>
+
+<div class="card" id="mwCard">
+  <div class="row"><div class="m" id="mwLabel">MARKTWETTEN · KALSHI</div><button id="mwRun" style="padding:8px 12px">Aktualisieren</button></div>
+  <div class="note" style="margin:6px 0">Was Händler auf der US-Prognosebörse Kalshi für den Kurs zu festen Terminen einpreisen – von der nächsten Stunde bis Jahresende. Nur Anzeige, der Bot nutzt es nicht.</div>
+  <div id="mwBox"><div class="note">lädt…</div></div>
+  <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Umweg-Adresse (nur nötig, wenn der Abruf blockiert wird)</summary>
+    <input id="mwProxy" placeholder="z. B. http://192.168.1.20:8080/?url=" style="width:100%;margin-top:6px;box-sizing:border-box">
+    <div class="note" style="margin-top:4px">Die Kalshi-Adresse wird kodiert hinten angehängt. Leer lassen = direkt abrufen. Wird nur in diesem Browser gespeichert.</div></details>
+  <div class="note" style="margin-top:8px"><b>So liest du es:</b> „Mitte“ = Kurs, bei dem der Markt 50:50 steht. „80 %-Bereich“ = dort landet der Kurs zum Termin laut Markt mit 80 % Wahrscheinlichkeit. „Höher als jetzt“ = Chance, dass der Kurs zum Termin über dem aktuellen liegt. Die Zahlen kommen aus den Preisen der Ja/Nein-Kontrakte (Mitte aus Geld- und Briefkurs). Kalshi rechnet mit dem Durchschnittskurs der letzten Minute vor dem Termin (CF Benchmarks bzw. Gold-Index). Im Vergleich werden dieselben Schwellen wie in „Szenarien“ verwendet; liegt der Kalshi-Termin nicht genau auf dem Horizont, ist der Vergleich nur ungefähr. Märkte mit wenig Handel können danebenliegen.</div>
 </div>
 
 <div class="card">
@@ -359,7 +369,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.9.0';
+const VERSION='v3.10.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2499,8 +2509,97 @@ async function tick(){
     $('status').textContent='aktualisiert '+new Date().toLocaleTimeString('de-DE');await botStep();try{checkPriceAlerts()}catch(e){console.error(e)}render()}
   catch(e){$('status').textContent='Fehler: '+e.message}
 }
-async function init(){try{candles=[];if(isMetal())metalSrc='bn';await loadCandles();await tick()}catch(e){$('status').textContent=isMetal()?e.message:'Keine Verbindung ('+e.message+')'}}
+async function init(){try{setTimeout(()=>{try{mwRefresh(false)}catch(_){}},0);candles=[];if(isMetal())metalSrc='bn';await loadCandles();await tick()}catch(e){$('status').textContent=isMetal()?e.message:'Keine Verbindung ('+e.message+')'}}
 $('verLbl').textContent=VERSION;
+// ===== Marktwetten (Kalshi-Prognosebörse) – identischer Block in Dashboard und Chartwerk =====
+// Liest die öffentlichen Kalshi-Märkte „Kurs über X zum Termin T?“ bzw. „Kurs zwischen A und B?“ und
+// rechnet daraus, was der Markt für den Kurs zum Termin einpreist (Mitte, 80-%-Bereich, Chance höher als jetzt).
+// Alle Werte in USD (Kalshi rechnet in USD). Nur Anzeige.
+const MW={
+ base:'https://api.elections.kalshi.com/trade-api/v2',
+ SER:{BTC:['KXBTCD','KXBTC','KXBTCW','KXBTCM','KXBTCY'],ETH:['KXETHD','KXETH','KXETHW'],XAU:['KXGOLDH','KXGOLDD','KXGOLDW','KXGOLDM','KXGOLDY']},
+ PFX:{BTC:'KXBTC',ETH:'KXETH',XAU:'KXGOLD'},CAT:{BTC:'Crypto',ETH:'Crypto',XAU:'Commodities'},
+ BK:[[.15,3,'Nächste Stunde'],[3,30,'Heute/morgen'],[30,192,'Diese Woche'],[192,1080,'Monat'],[1080,9600,'Länger']],
+ S:{},
+ prox(){try{return localStorage.getItem('mw:proxy')||''}catch(e){return''}},
+ setProx(v){try{v?localStorage.setItem('mw:proxy',v.trim()):localStorage.removeItem('mw:proxy')}catch(e){}},
+ async get(p){const u=MW.base+p,pr=MW.prox(),r=await fetch(pr?pr+encodeURIComponent(u):u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()},
+ n(v){const x=typeof v==='string'?parseFloat(v):v;return typeof x==='number'&&isFinite(x)?x:null},
+ d(m,k){const a=MW.n(m[k+'_dollars']);if(a!=null)return a;const c=MW.n(m[k]);return c==null?null:c/100},
+ prob(m){const b=MW.d(m,'yes_bid'),a=MW.d(m,'yes_ask'),l=MW.d(m,'last_price');
+  if(b!=null&&a!=null&&a>0&&a<=1&&a>=b&&a-b<=.12)return(a+b)/2;
+  if(l!=null&&l>0&&l<1&&(b==null||a==null||(l>=b-.02&&(a<=0||l<=a+.02))))return l;
+  if(b!=null&&a!=null&&a>0&&a<=1&&a>=b)return(a+b)/2;return l!=null&&l>0?l:null},
+ vol(m){return MW.n(m.volume_fp)??MW.n(m.volume)??0},
+ pav(ys){const st=[];ys.forEach(y=>{st.push({s:y,n:1});while(st.length>1&&st[st.length-2].s/st[st.length-2].n<st[st.length-1].s/st[st.length-1].n){const b=st.pop();st[st.length-1].s+=b.s;st[st.length-1].n+=b.n}});
+  const o=[];st.forEach(b=>{for(let i=0;i<b.n;i++)o.push(b.s/b.n)});return o},
+ // Aus allen Märkten eines Termins: Kurve P(Kurs > K) über K (aufsteigend, fallend in P)
+ curve(ms){const lad=[],bins=[];
+  ms.forEach(m=>{const p=MW.prob(m);if(p==null)return;const t=m.strike_type,f=MW.n(m.floor_strike),c=MW.n(m.cap_strike);
+   if((t==='greater'||t==='greater_or_equal')&&f!=null){lad.push([f,p]);bins.push([f,Infinity,p])}
+   else if((t==='less'||t==='less_or_equal')&&c!=null){lad.push([c,1-p]);bins.push([-Infinity,c,p])}
+   else if(t==='between'&&f!=null&&c!=null)bins.push([f,c,p])});
+  const nb=bins.filter(b=>isFinite(b[0])&&isFinite(b[1])).length;let pts;
+  if(nb>=3){bins.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const S=bins.reduce((s,b)=>s+b[2],0);if(!(S>.3))return null;
+   pts=[];let cum=1;bins.forEach(b=>{if(isFinite(b[0]))pts.push([b[0],cum]);cum-=b[2]/S});}
+  else{if(lad.length<3)return null;lad.sort((a,b)=>a[0]-b[0]);pts=lad}
+  const K=[],P=[];pts.forEach(([k,p])=>{if(K.length&&Math.abs(k-K[K.length-1])<1e-9){P[P.length-1]=(P[P.length-1]+p)/2}else{K.push(k);P.push(Math.max(0,Math.min(1,p)))}});
+  return K.length>=3?{K,P:MW.pav(P)}:null},
+ pGt(c,x){const{K,P}=c,n=K.length;if(x<=K[0])return{p:P[0],ge:true};if(x>=K[n-1])return{p:P[n-1],le:true};
+  let i=1;while(K[i]<x)i++;const f=(x-K[i-1])/(K[i]-K[i-1]);return{p:P[i-1]+f*(P[i]-P[i-1])}},
+ q(c,t){const{K,P}=c,n=K.length;if(t>P[0])return{v:K[0],lt:true};if(t<P[n-1])return{v:K[n-1],gt:true};
+  for(let i=1;i<n;i++)if(P[i]<=t){const a=P[i-1],b=P[i];return{v:a===b?(K[i-1]+K[i])/2:K[i-1]+(a-t)/(a-b)*(K[i]-K[i-1])}}return{v:K[n-1],gt:true}},
+ // Alle offenen Märkte einer Serie (mit Blättern)
+ async series(st){const out=[];let cur='';for(let k=0;k<5;k++){const j=await MW.get(`/markets?series_ticker=${st}&status=open&limit=1000${cur?'&cursor='+encodeURIComponent(cur):''}`);
+  (j.markets||[]).forEach(m=>out.push(m));cur=j.cursor;if(!cur||!(j.markets||[]).length)break}return out},
+ async discover(a){const pf=MW.PFX[a];let x=[];try{const j=await MW.get('/series?category='+encodeURIComponent(MW.CAT[a]));
+  x=(j.series||[]).map(s=>s.ticker).filter(t=>t&&t.startsWith(pf)&&!/(\d+M|MAX|MIN|ATH|UP|DOWN|ETF|HALF|RES)/.test(t.slice(pf.length)))}catch(e){}return x},
+ async load(a,force){const S=MW.S[a]||(MW.S[a]={});if(S.busy||(!force&&S.at&&Date.now()-S.at<120e3))return S;S.busy=true;
+  try{const ser=[...new Set([...MW.SER[a],...(await MW.discover(a))])].slice(0,10),ev={};let ok=0,err=null;
+   for(const st of ser){try{const ms=await MW.series(st);ok++;ms.forEach(m=>{const e=m.event_ticker||m.ticker;(ev[e]||(ev[e]={id:e,st,ms:[]})).ms.push(m)})}catch(e){err=e}}
+   if(!ok)throw err||new Error('keine Antwort');
+   const now=Date.now(),L=[];
+   Object.values(ev).forEach(e=>{const ct=Date.parse(e.ms[0].close_time||e.ms[0].expected_expiration_time||'');if(!isFinite(ct)||ct<=now)return;
+    const c=MW.curve(e.ms);if(!c)return;L.push({id:e.id,st:e.st,ct,h:(ct-now)/36e5,c,vol:e.ms.reduce((s,m)=>s+MW.vol(m),0),n:e.ms.length})});
+   // gleicher Termin bei mehreren Serien (Leiter + Spanne): die mit mehr Handel nehmen
+   L.sort((x,y)=>x.ct-y.ct);const D=[];L.forEach(e=>{const o=D.find(d=>Math.abs(d.ct-e.ct)<30*60e3);if(!o)D.push(e);else if(e.vol>o.vol)D[D.indexOf(o)]=e});
+   S.all=D;S.pick=MW.BK.map(([lo,hi,lab])=>{const c=D.filter(e=>e.h>=lo&&e.h<hi);if(!c.length)return null;const e=c.find(x=>x.vol>0)||c[0];return Object.assign({lab},e)}).filter(Boolean);
+   S.at=Date.now();S.err=null;
+   try{if(a!=='XAU'){const [u,e]=await Promise.all(['USD','EUR'].map(q=>fetch(`https://api.exchange.coinbase.com/products/BTC-${q}/ticker`,{cache:'no-store'}).then(r=>r.json())));const r=parseFloat(u.price)/parseFloat(e.price);if(r>0&&isFinite(r))MW.eurusd=r}}catch(e){}
+  }catch(e){S.err=e&&e.message==='Failed to fetch'||e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},
+ stats(e,spot){const c=e.c,m=MW.q(c,.5),lo=MW.q(c,.9),hi=MW.q(c,.1),pa=spot>0?MW.pGt(c,spot):null;return{m,lo,hi,pa}},
+ when(t){const d=new Date(t),now=new Date(),same=d.toDateString()===now.toDateString(),tm=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  if(same)return'heute '+tm;const tom=new Date(now.getTime()+864e5);if(d.toDateString()===tom.toDateString())return'morgen '+tm;
+  return d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:d.getFullYear()!==now.getFullYear()?'2-digit':undefined})+' '+tm},
+ inH(h){return h<1?'in '+Math.max(1,Math.round(h*60))+' Min':h<48?'in '+Math.round(h)+' Std':'in '+Math.round(h/24)+' Tagen'},
+ errTxt(s){return s.err==='cors'?'Kalshi lässt den Abruf aus diesem Browser nicht zu oder ist nicht erreichbar. Abhilfe: unten eine Umweg-Adresse eintragen (z. B. ein kleiner Weiterleiter auf deinem NAS).':'Abruf fehlgeschlagen ('+s.err+').'}
+};
+// v3.10.0 Marktwetten-Karte: zeigt Kalshi-Einpreisung und vergleicht mit der Karte „Szenarien“ (nur Anzeige, Bot unverändert)
+const mwAsset=()=>pair.startsWith('BTC')?'BTC':pair.startsWith('ETH')?'ETH':pair==='XAU-USD'?'XAU':null;
+const mwToUsd=()=>pair.endsWith('EUR')?(MW.eurusd||null):1;
+function mwRender(){const box=$('mwBox');if(!box)return;const a=mwAsset();
+ $('mwLabel').textContent='MARKTWETTEN · KALSHI · '+pair;
+ if(!a){box.innerHTML='<div class="note">Für dieses Instrument gibt es auf Kalshi keine passenden Kursmärkte (nur Bitcoin, Ethereum und Gold).</div>';return}
+ const S=MW.S[a];if(!S||(!S.at&&S.busy)||!S.at){box.innerHTML='<div class="note">lädt…</div>';return}
+ if(S.err){box.innerHTML=`<div class="note dn">${MW.errTxt(S)}</div>`;return}
+ if(!S.pick||!S.pick.length){box.innerHTML='<div class="note">Gerade keine offenen Märkte gefunden.</div>';return}
+ const k=mwToUsd(),spot=last!=null&&k?last*k:null,dec=last!=null&&last<500?2:0,
+  P=v=>k?fmt(v/k,dec):'$'+v.toLocaleString('de-DE',{maximumFractionDigits:dec}),
+  Q=(o,pre)=>(o.lt?'unter ':o.gt?'über ':'')+P(o.v),pc=v=>Math.round(v*100)+' %';
+ const rows=S.pick.map(e=>{const s=MW.stats(e,spot);const pa=s.pa?(s.pa.ge?'≥ ':s.pa.le?'≤ ':'')+pc(s.pa.p):'–',up=s.pa&&s.pa.p>.52,dnx=s.pa&&s.pa.p<.48;
+  return`<tr><td>${e.lab}<div class="m">${MW.when(e.ct)} · ${MW.inH(e.h)}</div></td><td>${Q(s.m)}</td><td>${Q(s.lo)} – ${Q(s.hi)}</td><td class="${up?'up':dnx?'dn':''}">${pa}</td></tr>`}).join('');
+ // Vergleich mit „Szenarien“: gleiche Schwellen, Termin möglichst nah am Horizont der Karte
+ const cmp=[];if(SCEN_PAIR===pair&&spot&&last)[['4h',4,1,10],['7d',168,72,264],['28d',672,432,960]].forEach(([key,hh,lo,hi])=>{const L=SCEN_LV[key];if(!L)return;
+  const c=S.all.filter(e=>e.h>=lo&&e.h<=hi).sort((x,y)=>Math.abs(x.h-hh)-Math.abs(y.h-hh))[0];if(!c)return;
+  const pu=MW.pGt(c.c,L.up/last*spot),pd=MW.pGt(c.c,L.dn/last*spot),mu=Math.round(pu.p*100),md=Math.round((1-pd.p)*100),ms=Math.max(0,100-mu-md),edge=pu.ge||pu.le||pd.ge||pd.le;
+  cmp.push(`<tr><td>${L.title}<div class="m">Markt: ${MW.when(c.ct)}</div></td><td><span class="up">▲ ${L.a}</span> · ${L.b} · <span class="dn">▼ ${L.c}</span></td><td><span class="up">▲ ${mu}</span> · ${ms} · <span class="dn">▼ ${md}</span>${edge?' <span class="m">(Rand der Leiter)</span>':''}</td></tr>`)});
+ box.innerHTML=`<table><thead><tr><th>TERMIN</th><th>MITTE</th><th>80 %-BEREICH</th><th>HÖHER ALS JETZT</th></tr></thead><tbody>${rows}</tbody></table>`+
+  (cmp.length?`<div class="m" style="margin-top:12px">VERGLEICH MIT „SZENARIEN“ (BULLISCH · SEITWÄRTS · BÄRISCH IN %)</div><table><thead><tr><th>HORIZONT</th><th>MODELL</th><th>MARKT</th></tr></thead><tbody>${cmp.join('')}</tbody></table>`:'')+
+  `<div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')} · ${S.all.length} offene Termine${pair.endsWith('EUR')?' · umgerechnet von USD':''}</div>`}
+async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();return}const p=MW.load(a,force);mwRender();await p;mwRender()}
+$('mwRun').onclick=()=>mwRefresh(true);
+$('mwProxy').value=MW.prox();$('mwProxy').onchange=()=>{MW.setProx($('mwProxy').value);mwRefresh(true)};
+setInterval(()=>mwRefresh(false),20000);setTimeout(()=>mwRefresh(false),1500);
 init().then(()=>{syRender();if(SY.tok&&SY.role!=='off')syLoop(true)});setInterval(tick,2000);addEventListener('resize',render);
 </script>
 </body>

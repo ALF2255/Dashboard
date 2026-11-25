@@ -2618,7 +2618,9 @@ const MW={
    S.at=Date.now();S.err=null}
   catch(e){S.err=e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},
  // p90 = wird mit 90 % erreicht, p50 = 50:50, p10 = nur 10 % Chance
- tstats(e){const c=e.c;return e.kind==='max'?{p90:MW.q(c,.9),p50:MW.q(c,.5),p10:MW.q(c,.1)}:{p90:MW.q(c,.1),p50:MW.q(c,.5),p10:MW.q(c,.9)}},
+ // edge: nächstliegende Stufe der Leiter und Chance, sie zu erreichen (für den Fall, dass die Marken außerhalb der Leiter liegen)
+ tstats(e){const c=e.c,n=c.K.length,r=e.kind==='max'?{p90:MW.q(c,.9),p50:MW.q(c,.5),p10:MW.q(c,.1),edge:{k:c.K[0],p:c.P[0]}}:{p90:MW.q(c,.1),p50:MW.q(c,.5),p10:MW.q(c,.9),edge:{k:c.K[n-1],p:1-c.P[n-1]}};
+  r.out=!!(r.p50.lt||r.p50.gt);return r},
  stats(e,spot){const c=e.c,m=MW.q(c,.5),lo=MW.q(c,.9),hi=MW.q(c,.1),pa=spot>0?MW.pGt(c,spot):null;return{m,lo,hi,pa}},
  when(t){const d=new Date(t),now=new Date(),same=d.toDateString()===now.toDateString(),tm=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   if(same)return'heute '+tm;const tom=new Date(now.getTime()+864e5);if(d.toDateString()===tom.toDateString())return'morgen '+tm;
@@ -2663,7 +2665,9 @@ function htRender(){const box=$('htBox');if(!box)return;const a=mwAsset();$('htL
  if(!S.rows||!S.rows.length){box.innerHTML='<div class="note">Gerade keine offenen Hoch/Tief-Wetten gefunden.</div>';return}
  const k=mwToUsd(),dec=last!=null&&last<500?2:0,P=v=>k?fmt(v/k,dec):'$'+v.toLocaleString('de-DE',{maximumFractionDigits:dec}),Q=o=>(o.lt?'< ':o.gt?'> ':'')+P(o.v);
  const labs=['Tag','Woche','Monat','Jahr'].filter(l=>S.rows.some(r=>r.lab===l));
- const cell=r=>{if(!r)return'<td>–</td>';const t=MW.tstats(r),c=r.kind==='max'?'up':'dn';return`<td>${Q(t.p90)}<br><b class="${c}">${Q(t.p50)}</b><br><span class="m">${Q(t.p10)}</span></td>`};
+ const cell=r=>{if(!r)return'<td>–</td>';const t=MW.tstats(r),c=r.kind==='max'?'up':'dn';
+  if(t.out)return`<td>${P(t.edge.k)} erreicht:<br><b class="${c}">${t.edge.p<.01?'< 1':Math.round(t.edge.p*100)} %</b><br><span class="m">(Stufen liegen weit weg)</span></td>`;
+  return`<td>${Q(t.p90)}<br><b class="${c}">${Q(t.p50)}</b><br><span class="m">${Q(t.p10)}</span></td>`};
  box.innerHTML=`<table><thead><tr><th>BIS</th><th>▲ HÖCHSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th><th>▼ TIEFSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th></tr></thead><tbody>${labs.map(l=>{const mx=S.rows.find(r=>r.lab===l&&r.kind==='max'),mn=S.rows.find(r=>r.lab===l&&r.kind==='min'),t=(mx||mn).ct;
   return`<tr><td>${l}<div class="m">${MW.when(t)}</div></td>${cell(mx)}${cell(mn)}</tr>`}).join('')}</tbody></table>
   <div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')}${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}

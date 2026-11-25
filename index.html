@@ -2523,7 +2523,18 @@ const MW={
  S:{},
  prox(){try{return localStorage.getItem('mw:proxy')||''}catch(e){return''}},
  setProx(v){try{v?localStorage.setItem('mw:proxy',v.trim()):localStorage.removeItem('mw:proxy')}catch(e){}},
- async get(p){const u=MW.base+p,pr=MW.prox(),r=await fetch(pr?pr+encodeURIComponent(u):u,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()},
+ // Kalshi erlaubt keinen direkten Browser-Abruf (CORS) → der Reihe nach über öffentliche Weiterleiter; der funktionierende wird gemerkt.
+ // Es laufen nur öffentliche Marktdaten darüber, keine Schlüssel. Eigene Umweg-Adresse hat Vorrang.
+ RELAYS:['','https://corsproxy.io/?url=','https://api.allorigins.win/raw?url=','https://api.codetabs.com/v1/proxy/?quest='],
+ route:null,
+ async get(p){const u=MW.base+p,own=MW.prox();let ord;
+  if(own)ord=[own];else{if(MW.route==null)try{MW.route=localStorage.getItem('mw:route')}catch(e){}ord=MW.RELAYS.slice();const r=MW.route;if(r!=null&&ord.includes(r)){ord.splice(ord.indexOf(r),1);ord.unshift(r)}}
+  let err;for(const pr of ord){const ac=typeof AbortController!=='undefined'?new AbortController():null,to=ac?setTimeout(()=>ac.abort(),15000):0;
+   try{const r=await fetch(pr?pr+encodeURIComponent(u):u,{cache:'no-store',signal:ac?ac.signal:undefined});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();
+    if(!j||typeof j!=='object')throw new Error('keine Daten');if(!own&&MW.route!==pr){MW.route=pr;try{localStorage.setItem('mw:route',pr)}catch(e){}}return j}
+   catch(e){err=e}finally{clearTimeout(to)}}
+  throw err||new Error('keine Antwort')},
+ via(){const p=MW.prox()||MW.route||'';return p?' · über '+(p.match(/^https?:\/\/([^/?]+)/)||[,'Umweg'])[1]:''},
  n(v){const x=typeof v==='string'?parseFloat(v):v;return typeof x==='number'&&isFinite(x)?x:null},
  d(m,k){const a=MW.n(m[k+'_dollars']);if(a!=null)return a;const c=MW.n(m[k]);return c==null?null:c/100},
  prob(m){const b=MW.d(m,'yes_bid'),a=MW.d(m,'yes_ask'),l=MW.d(m,'last_price');
@@ -2572,7 +2583,7 @@ const MW={
   if(same)return'heute '+tm;const tom=new Date(now.getTime()+864e5);if(d.toDateString()===tom.toDateString())return'morgen '+tm;
   return d.toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:d.getFullYear()!==now.getFullYear()?'2-digit':undefined})+' '+tm},
  inH(h){return h<1?'in '+Math.max(1,Math.round(h*60))+' Min':h<48?'in '+Math.round(h)+' Std':'in '+Math.round(h/24)+' Tagen'},
- errTxt(s){return s.err==='cors'?'Kalshi lässt den Abruf aus diesem Browser nicht zu oder ist nicht erreichbar. Abhilfe: unten eine Umweg-Adresse eintragen (z. B. ein kleiner Weiterleiter auf deinem NAS).':'Abruf fehlgeschlagen ('+s.err+').'}
+ errTxt(s){return(s.err==='cors'?'Kalshi war weder direkt noch über die öffentlichen Weiterleiter erreichbar.':'Abruf fehlgeschlagen ('+s.err+').')+' Nächster Versuch in 2 Minuten. Dauerhafte Abhilfe: eigene Umweg-Adresse eintragen (z. B. Weiterleiter auf deinem NAS).'}
 };
 // v3.10.0 Marktwetten-Karte: zeigt Kalshi-Einpreisung und vergleicht mit der Karte „Szenarien“ (nur Anzeige, Bot unverändert)
 const mwAsset=()=>pair.startsWith('BTC')?'BTC':pair.startsWith('ETH')?'ETH':pair==='XAU-USD'?'XAU':null;
@@ -2595,7 +2606,7 @@ function mwRender(){const box=$('mwBox');if(!box)return;const a=mwAsset();
   cmp.push(`<tr><td>${L.title}<div class="m">Markt: ${MW.when(c.ct)}</div></td><td><span class="up">▲ ${L.a}</span> · ${L.b} · <span class="dn">▼ ${L.c}</span></td><td><span class="up">▲ ${mu}</span> · ${ms} · <span class="dn">▼ ${md}</span>${edge?' <span class="m">(Rand der Leiter)</span>':''}</td></tr>`)});
  box.innerHTML=`<table><thead><tr><th>TERMIN</th><th>MITTE</th><th>80 %-BEREICH</th><th>HÖHER ALS JETZT</th></tr></thead><tbody>${rows}</tbody></table>`+
   (cmp.length?`<div class="m" style="margin-top:12px">VERGLEICH MIT „SZENARIEN“ (BULLISCH · SEITWÄRTS · BÄRISCH IN %)</div><table><thead><tr><th>HORIZONT</th><th>MODELL</th><th>MARKT</th></tr></thead><tbody>${cmp.join('')}</tbody></table>`:'')+
-  `<div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')} · ${S.all.length} offene Termine${pair.endsWith('EUR')?' · umgerechnet von USD':''}</div>`}
+  `<div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')} · ${S.all.length} offene Termine${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
 async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();return}const p=MW.load(a,force);mwRender();await p;mwRender()}
 $('mwRun').onclick=()=>mwRefresh(true);
 $('mwProxy').value=MW.prox();$('mwProxy').onchange=()=>{MW.setProx($('mwProxy').value);mwRefresh(true)};

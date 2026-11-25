@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.10.2 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.10.3 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -161,6 +161,12 @@ label.f{display:block}
     <input id="mwProxy" placeholder="z. B. http://192.168.1.20:8080/?url=" style="width:100%;margin-top:6px;box-sizing:border-box">
     <div class="note" style="margin-top:4px">Die Kalshi-Adresse wird kodiert hinten angehängt. Leer lassen = direkt abrufen. Wird nur in diesem Browser gespeichert.</div></details>
   <div class="note" style="margin-top:8px"><b>So liest du es:</b> „Mitte“ = Kurs, bei dem der Markt 50:50 steht. „80 %-Bereich“ = dort landet der Kurs zum Termin laut Markt mit 80 % Wahrscheinlichkeit. „Höher als jetzt“ = Chance, dass der Kurs zum Termin über dem aktuellen liegt. Die Zahlen kommen aus den Preisen der Ja/Nein-Kontrakte (Mitte aus Geld- und Briefkurs). Kalshi rechnet mit dem Durchschnittskurs der letzten Minute vor dem Termin (CF Benchmarks bzw. Gold-Index). Im Vergleich werden dieselben Schwellen wie in „Szenarien“ verwendet; liegt der Kalshi-Termin nicht genau auf dem Horizont, ist der Vergleich nur ungefähr. Märkte mit wenig Handel können danebenliegen.</div>
+</div>
+<div class="card" id="htCard">
+  <div class="row"><div class="m" id="htLabel">HOCH/TIEF-WETTEN · KALSHI</div><button id="htRun" style="padding:8px 12px">Aktualisieren</button></div>
+  <div class="note" style="margin:6px 0">Wetten darauf, ob der Kurs <b>bis</b> zum Termin <b>irgendwann</b> eine Marke erreicht – nicht, wo er am Termin steht. Daraus: welche Hochs und Tiefs der Markt bis dahin erwartet. Nur Anzeige.</div>
+  <div id="htBox"><div class="note">lädt…</div></div>
+  <div class="note" style="margin-top:8px"><b>So liest du es:</b> „90 %“ = diese Marke wird fast sicher noch erreicht, „50 %“ = 50:50, „10 %“ = nur geringe Chance. Beim Höchststand gilt: Liegt die 90-%-Marke schon nahe am aktuellen Kurs, erwartet der Markt kaum weiteren Anstieg. Beim Tiefststand entsprechend umgekehrt.</div>
 </div>
 
 <div class="card">
@@ -375,7 +381,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.10.2';
+const VERSION='v3.10.3';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2516,7 +2522,7 @@ async function tick(){
     $('status').textContent='aktualisiert '+new Date().toLocaleTimeString('de-DE');await botStep();try{checkPriceAlerts()}catch(e){console.error(e)}render()}
   catch(e){$('status').textContent='Fehler: '+e.message}
 }
-async function init(){try{setTimeout(()=>{try{mwRefresh(false)}catch(_){}},0);candles=[];if(isMetal())metalSrc='bn';await loadCandles();await tick()}catch(e){$('status').textContent=isMetal()?e.message:'Keine Verbindung ('+e.message+')'}}
+async function init(){try{setTimeout(()=>{try{mwRefresh(false);htRefresh(false)}catch(_){}},0);candles=[];if(isMetal())metalSrc='bn';await loadCandles();await tick()}catch(e){$('status').textContent=isMetal()?e.message:'Keine Verbindung ('+e.message+')'}}
 $('verLbl').textContent=VERSION;
 // ===== Marktwetten (Kalshi-Prognosebörse) – identischer Block in Dashboard und Chartwerk =====
 // Liest die öffentlichen Kalshi-Märkte „Kurs über X zum Termin T?“ bzw. „Kurs zwischen A und B?“ und
@@ -2594,6 +2600,25 @@ const MW={
    S.at=Date.now();S.err=null;
    try{if(MW.cfg(a).c==='Crypto'){const [u,e]=await Promise.all(['USD','EUR'].map(q=>fetch(`https://api.exchange.coinbase.com/products/BTC-${q}/ticker`,{cache:'no-store'}).then(r=>r.json())));const r=parseFloat(u.price)/parseFloat(e.price);if(r>0&&isFinite(r))MW.eurusd=r}}catch(e){}
   }catch(e){S.err=e&&e.message==='Failed to fetch'||e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},
+ // ---- Hoch/Tief-Wetten („Erreicht der Kurs bis zum Termin irgendwann X?“) – getrennt von den Kurswetten ----
+ // MAX-Serien: P(Höchststand ≥ K); MIN-Serien: P(Tiefststand ≤ K) → curve() liefert jeweils P(Extremwert > K).
+ TOUCH:{BTC:['KXBTCMAXD','KXBTCMAXW','KXBTCMAXM','KXBTCMINMON','KXBTCMAXY','KXBTCMINY'],ETH:['KXETHMAXMON','KXETHMINMON','KXETHMAXY'],
+  SOL:['KXSOLMAXMON','KXSOLMINMON','KXSOLMAXY','KXSOLMINY'],ZEC:['KXZECMAXMON','KXZECMINY'],XAU:['KXGOLDYEAR']},
+ tkind(t,a){const r=t.slice(MW.cfg(a).p.length);if(/^MINMAX/.test(r))return null;if(/^MAX/.test(r)||r==='YEAR')return'max';if(/^MIN/.test(r))return'min';return null},
+ async discoverTouch(a){const C=MW.cfg(a);if(!C.c)return[];await MW.discover(a);let L=[];try{L=(JSON.parse(localStorage.getItem('mw:ser:'+C.c)||'null')||{}).l||[]}catch(e){}
+  return L.filter(t=>t.startsWith(C.p)&&/^(MAX|MIN)(D|W|WEEK|M|MON|Q|Y)?$/.test(t.slice(C.p.length)))},
+ async loadTouch(a,force){const k='T:'+a,S=MW.S[k]||(MW.S[k]={});if(S.busy||(!force&&S.at&&Date.now()-S.at<300e3))return S;S.busy=true;
+  try{const ser=[...new Set([...(MW.TOUCH[a]||[]),...(await MW.discoverTouch(a))])].filter(t=>MW.tkind(t,a)).slice(0,10),ev={};let ok=0,err=null;
+   for(const st of ser){const kind=MW.tkind(st,a);try{const ms=await MW.series(st);ok++;ms.forEach(m=>{const e=m.event_ticker||m.ticker;(ev[e]||(ev[e]={id:e,st,kind,ms:[]})).ms.push(m)})}catch(e){err=e;if(!ok)break}}
+   if(!ok&&err)throw err;
+   const now=Date.now(),L=[];Object.values(ev).forEach(e=>{const ct=Date.parse(e.ms[0].close_time||e.ms[0].expected_expiration_time||'');if(!isFinite(ct)||ct<=now)return;
+    const c=MW.curve(e.ms);if(!c)return;L.push({id:e.id,st:e.st,kind:e.kind,ct,h:(ct-now)/36e5,c,vol:e.ms.reduce((x,m)=>x+MW.vol(m),0)})});
+   S.rows=[];['max','min'].forEach(kd=>[[0,30,'Tag'],[30,192,'Woche'],[192,1080,'Monat'],[1080,9600,'Jahr']].forEach(([lo,hi,lab])=>{
+    const c=L.filter(e=>e.kind===kd&&e.h>=lo&&e.h<hi).sort((x,y)=>x.ct-y.ct||y.vol-x.vol);if(c.length)S.rows.push(Object.assign({lab},c[0]))}));
+   S.at=Date.now();S.err=null}
+  catch(e){S.err=e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},
+ // p90 = wird mit 90 % erreicht, p50 = 50:50, p10 = nur 10 % Chance
+ tstats(e){const c=e.c;return e.kind==='max'?{p90:MW.q(c,.9),p50:MW.q(c,.5),p10:MW.q(c,.1)}:{p90:MW.q(c,.1),p50:MW.q(c,.5),p10:MW.q(c,.9)}},
  stats(e,spot){const c=e.c,m=MW.q(c,.5),lo=MW.q(c,.9),hi=MW.q(c,.1),pa=spot>0?MW.pGt(c,spot):null;return{m,lo,hi,pa}},
  when(t){const d=new Date(t),now=new Date(),same=d.toDateString()===now.toDateString(),tm=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   if(same)return'heute '+tm;const tom=new Date(now.getTime()+864e5);if(d.toDateString()===tom.toDateString())return'morgen '+tm;
@@ -2630,6 +2655,21 @@ async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();try{mwlRende
 $('mwRun').onclick=()=>mwRefresh(true);
 $('mwProxy').value=MW.prox();$('mwProxy').onchange=()=>{MW.setProx($('mwProxy').value);mwRefresh(true)};
 setInterval(()=>mwRefresh(false),20000);setTimeout(()=>mwRefresh(false),1500);
+// v3.10.3 Hoch/Tief-Wetten (eigene Karte): MAX/MIN-Serien von Kalshi
+function htRender(){const box=$('htBox');if(!box)return;const a=mwAsset();$('htLabel').textContent='HOCH/TIEF-WETTEN · KALSHI · '+pair;
+ if(!a){box.innerHTML='<div class="note">Für dieses Instrument gibt es auf Kalshi keine Hoch/Tief-Wetten.</div>';return}
+ const S=MW.S['T:'+a];if(!S||!S.at){box.innerHTML='<div class="note">lädt…</div>';return}
+ if(S.err){box.innerHTML=`<div class="note dn">${MW.errTxt(S)}</div>`;return}
+ if(!S.rows||!S.rows.length){box.innerHTML='<div class="note">Gerade keine offenen Hoch/Tief-Wetten gefunden.</div>';return}
+ const k=mwToUsd(),dec=last!=null&&last<500?2:0,P=v=>k?fmt(v/k,dec):'$'+v.toLocaleString('de-DE',{maximumFractionDigits:dec}),Q=o=>(o.lt?'< ':o.gt?'> ':'')+P(o.v);
+ const labs=['Tag','Woche','Monat','Jahr'].filter(l=>S.rows.some(r=>r.lab===l));
+ const cell=r=>{if(!r)return'<td>–</td>';const t=MW.tstats(r),c=r.kind==='max'?'up':'dn';return`<td>${Q(t.p90)}<br><b class="${c}">${Q(t.p50)}</b><br><span class="m">${Q(t.p10)}</span></td>`};
+ box.innerHTML=`<table><thead><tr><th>BIS</th><th>▲ HÖCHSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th><th>▼ TIEFSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th></tr></thead><tbody>${labs.map(l=>{const mx=S.rows.find(r=>r.lab===l&&r.kind==='max'),mn=S.rows.find(r=>r.lab===l&&r.kind==='min'),t=(mx||mn).ct;
+  return`<tr><td>${l}<div class="m">${MW.when(t)}</div></td>${cell(mx)}${cell(mn)}</tr>`}).join('')}</tbody></table>
+  <div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')}${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
+async function htRefresh(force){const a=mwAsset();if(!a){htRender();return}const p=MW.loadTouch(a,force);htRender();await p;htRender()}
+$('htRun').onclick=()=>htRefresh(true);setInterval(()=>htRefresh(false),60000);setTimeout(()=>htRefresh(false),3000);
+
 // v3.10.1 Marktwetten-Protokoll: stündlich Schnappschuss (nur Hauptgerät), Auflösung mit dem offiziellen Kalshi-Abrechnungswert
 const MWK='btcmwlog';
 let MWL=(()=>{try{const r=JSON.parse(localStorage.getItem(MWK));return r&&Array.isArray(r.recs)?r:{recs:[]}}catch(e){return{recs:[]}}})(),mwlBusy=false,mwlAt=0;

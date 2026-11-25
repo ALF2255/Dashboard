@@ -42,7 +42,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.10.2**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.10.3**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|
@@ -58,6 +58,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.10.0 | Karte „Marktwetten“: Kalshi-Einpreisung für BTC, ETH und Gold (Stunde bis Jahr) mit Vergleich zu „Szenarien“ – nur Anzeige |
 | v3.10.1 | Marktwetten-Protokoll: stündlicher Schnappschuss (Hauptgerät), Prüfung mit dem Kalshi-Abrechnungskurs, Vergleich Szenarien gegen Markt (Brier) – synchronisiert über das Gist |
 | v3.10.2 | Marktwetten-Protokoll schreibt Bitcoin und Gold immer beide mit, unabhängig vom gewählten Instrument |
+| v3.10.3 | Eigene Karte „Hoch/Tief-Wetten“: Kalshi-Wetten auf Höchst- und Tiefststände bis Tag/Woche/Monat/Jahr (90 % · 50 % · 10 %) – nur Anzeige |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

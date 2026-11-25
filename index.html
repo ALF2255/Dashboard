@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.10.1 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.10.2 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -156,7 +156,7 @@ label.f{display:block}
   <table><thead><tr><th>TERMIN</th><th>GEPRÜFT</th><th>IM 80 %-BEREICH</th><th>RICHTUNG</th><th>MITTE VS. „BLEIBT GLEICH“</th></tr></thead><tbody id="mwlTb"></tbody></table>
   <div class="m" style="margin-top:10px">SZENARIEN GEGEN MARKT (FEHLERWERT, KLEINER = BESSER)</div>
   <table><thead><tr><th>HORIZONT</th><th>GEPRÜFT</th><th>SZENARIEN</th><th>MARKT</th><th>BESSER</th></tr></thead><tbody id="mwlCmp"></tbody></table>
-  <div class="note" style="margin-top:6px">Jede Stunde wird festgehalten, was der Markt für die angezeigten Termine einpreist (nur am Hauptgerät, solange das Dashboard offen ist; über die Synchronisierung auch auf den anderen Geräten sichtbar). Nach dem Termin wird mit dem offiziellen Kalshi-Abrechnungskurs geprüft: Lag er im 80 %-Bereich (ideal: etwa 80 %)? Stimmte die Richtung? War die Mitte näher dran als „Kurs bleibt gleich“? Im Vergleich mit „Szenarien“ zählt der Fehlerwert (Brier): 0 = perfekt, je kleiner desto besser.</div>
+  <div class="note" style="margin-top:6px">Jede Stunde wird für Bitcoin und Gold festgehalten (egal welches Instrument gerade gewählt ist), was der Markt für die Termine einpreist (nur am Hauptgerät, solange das Dashboard offen ist; über die Synchronisierung auch auf den anderen Geräten sichtbar). Nach dem Termin wird mit dem offiziellen Kalshi-Abrechnungskurs geprüft: Lag er im 80 %-Bereich (ideal: etwa 80 %)? Stimmte die Richtung? War die Mitte näher dran als „Kurs bleibt gleich“? Im Vergleich mit „Szenarien“ zählt der Fehlerwert (Brier): 0 = perfekt, je kleiner desto besser. Dieser Vergleich wird nur für das gerade gewählte Instrument mitgeschrieben, weil die Szenarien nur dafür berechnet werden.</div>
   <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Umweg-Adresse (nur nötig, wenn der Abruf blockiert wird)</summary>
     <input id="mwProxy" placeholder="z. B. http://192.168.1.20:8080/?url=" style="width:100%;margin-top:6px;box-sizing:border-box">
     <div class="note" style="margin-top:4px">Die Kalshi-Adresse wird kodiert hinten angehängt. Leer lassen = direkt abrufen. Wird nur in diesem Browser gespeichert.</div></details>
@@ -375,7 +375,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.10.1';
+const VERSION='v3.10.2';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2617,7 +2617,7 @@ function mwRender(){const box=$('mwBox');if(!box)return;const a=mwAsset();
  box.innerHTML=`<table><thead><tr><th>TERMIN</th><th>MITTE</th><th>80 %-BEREICH</th><th>HÖHER ALS JETZT</th></tr></thead><tbody>${rows}</tbody></table>`+
   (cmp.length?`<div class="m" style="margin-top:12px">VERGLEICH MIT „SZENARIEN“ (BULLISCH · SEITWÄRTS · BÄRISCH IN %)</div><table><thead><tr><th>HORIZONT</th><th>MODELL</th><th>MARKT</th></tr></thead><tbody>${cmp.join('')}</tbody></table>`:'')+
   `<div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')} · ${S.all.length} offene Termine${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
-async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();try{mwlRender()}catch(_){}return}const p=MW.load(a,force);mwRender();await p;mwRender();try{mwLog();mwlRender()}catch(_){}}
+async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();try{mwlRender()}catch(_){}return}const p=MW.load(a,force);mwRender();await p;mwRender();try{mwLogAll();mwlRender()}catch(_){}}
 $('mwRun').onclick=()=>mwRefresh(true);
 $('mwProxy').value=MW.prox();$('mwProxy').onchange=()=>{MW.setProx($('mwProxy').value);mwRefresh(true)};
 setInterval(()=>mwRefresh(false),20000);setTimeout(()=>mwRefresh(false),1500);
@@ -2625,10 +2625,21 @@ setInterval(()=>mwRefresh(false),20000);setTimeout(()=>mwRefresh(false),1500);
 const MWK='btcmwlog';
 let MWL=(()=>{try{const r=JSON.parse(localStorage.getItem(MWK));return r&&Array.isArray(r.recs)?r:{recs:[]}}catch(e){return{recs:[]}}})(),mwlBusy=false,mwlAt=0;
 const mwlSave=()=>{try{localStorage.setItem(MWK,JSON.stringify(MWL))}catch(e){}};
-function mwLog(){const a=mwAsset(),S=a&&MW.S[a];if(roOnly()||!S||S.err||!S.pick||!S.at||Date.now()-S.at>5*60e3)return;
- const k=mwToUsd(),spot=last!=null&&k?last*k:null;if(!spot)return;const now=Date.now();
- const lastT=MWL.recs.reduce((m,r)=>r.a===a?Math.max(m,r.t0):m,0);if(now-lastT<55*60e3)return;
- const cm={};mwCmp(S,spot).forEach(x=>{cm[x.c.id]=cm[x.c.id]||[];cm[x.c.id].push({key:x.key,up:x.upU,dn:x.dnU,mod:[x.L.a,x.L.b,x.L.c],mkt:[x.mu,x.ms,x.md],edge:x.edge})});
+// v3.10.2: Bitcoin und Gold werden immer beide mitgeschrieben – unabhängig vom gewählten Instrument.
+// Kurs in USD: beim gewählten Instrument der Live-Kurs, sonst Coinbase (BTC-USD) bzw. Binance (PAXG = Gold). Szenarien-Vergleich nur für das gewählte Instrument.
+const MW_LOG=['BTC','XAU'],mwLastT=a=>MWL.recs.reduce((m,r)=>r.a===a?Math.max(m,r.t0):m,0);
+async function mwSpot(a){try{if(a==='BTC'){const j=await fetch('https://api.exchange.coinbase.com/products/BTC-USD/ticker',{cache:'no-store'}).then(r=>r.json());return parseFloat(j.price)||null}
+ if(a==='XAU'){const j=await fetch('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT',{cache:'no-store'}).then(r=>r.json());return parseFloat(j.price)||null}}catch(e){}return null}
+let mwAllBusy=false;
+async function mwLogAll(){if(mwAllBusy||roOnly())return;mwAllBusy=true;
+ try{for(const a of MW_LOG){if(Date.now()-mwLastT(a)<55*60e3)continue;
+   const S=await MW.load(a);if(!S||S.err||!S.pick)continue;
+   const cur=mwAsset()===a,k=cur?mwToUsd():null,spot=cur&&last!=null&&k?last*k:await mwSpot(a);mwLog(a,spot,cur)}}
+ catch(e){}finally{mwAllBusy=false}}
+function mwLog(a,spot,cur){const S=a&&MW.S[a];if(roOnly()||!S||S.err||!S.pick||!S.at||Date.now()-S.at>5*60e3)return;
+ if(!(spot>0))return;const now=Date.now();
+ if(now-mwLastT(a)<55*60e3)return;
+ const cm={};(cur?mwCmp(S,spot):[]).forEach(x=>{cm[x.c.id]=cm[x.c.id]||[];cm[x.c.id].push({key:x.key,up:x.upU,dn:x.dnU,mod:[x.L.a,x.L.b,x.L.c],mkt:[x.mu,x.ms,x.md],edge:x.edge})});
  const ev=new Map();S.pick.forEach(e=>ev.set(e.id,e));Object.keys(cm).forEach(id=>{if(!ev.has(id)){const e=S.all.find(x=>x.id===id);if(e)ev.set(id,e)}});
  ev.forEach(e=>{const st=MW.stats(e,spot);MWL.recs.push({a,id:e.id,lab:e.lab||'Vergleich',t0:now,ct:e.ct,h:+e.h.toFixed(2),S0:spot,
   med:st.m.lt||st.m.gt?null:st.m.v,lo:st.lo.lt||st.lo.gt?null:st.lo.v,hi:st.hi.lt||st.hi.gt?null:st.hi.v,pUp:st.pa?+st.pa.p.toFixed(3):null,cmp:cm[e.id]||null,res:null})});
@@ -2657,7 +2668,7 @@ function mwlRender(){const tb=$('mwlTb'),tc=$('mwlCmp');if(!tb)return;const a=mw
   const bm=X.reduce((s,c)=>s+c.bm,0)/n,bk=X.reduce((s,c)=>s+c.bk,0)/n,f=v=>v.toFixed(3).replace('.',',');
   return`<tr><td>${T[k]}</td><td>${n}</td><td>${f(bm)}</td><td>${f(bk)}</td><td>${n<20?'<span class="m">zu wenig</span>':Math.abs(bm-bk)<.01?'gleich':bm<bk?'<b class="up">Szenarien</b>':'<b class="up">Markt</b>'}</td></tr>`}).join('');
  $('mwlInfo').textContent=`${a==='XAU'?'Gold':a}: ${own.length} Schnappschüsse gespeichert, ${done.length} schon gegen den Abrechnungskurs geprüft.`+(done.length<30?' Aussagekräftig wird es erst ab etwa 30 Prüfungen je Zeile.':'')}
-setInterval(()=>{try{mwLog();mwlCheck();mwlRender()}catch(_){}},60e3);setTimeout(()=>{try{mwlRender()}catch(_){}},2000);
+setInterval(()=>{try{mwLogAll();mwlCheck();mwlRender()}catch(_){}},60e3);setTimeout(()=>{try{mwLogAll()}catch(_){}},8000);setTimeout(()=>{try{mwlRender()}catch(_){}},2000);
 
 init().then(()=>{syRender();if(SY.tok&&SY.role!=='off')syLoop(true)});setInterval(tick,2000);addEventListener('resize',render);
 </script>

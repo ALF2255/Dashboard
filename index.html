@@ -2574,7 +2574,7 @@ const MW={
     const c=MW.curve(e.ms);if(!c)return;L.push({id:e.id,st:e.st,ct,h:(ct-now)/36e5,c,vol:e.ms.reduce((s,m)=>s+MW.vol(m),0),n:e.ms.length})});
    // gleicher Termin bei mehreren Serien (Leiter + Spanne): die mit mehr Handel nehmen
    L.sort((x,y)=>x.ct-y.ct);const D=[];L.forEach(e=>{const o=D.find(d=>Math.abs(d.ct-e.ct)<30*60e3);if(!o)D.push(e);else if(e.vol>o.vol)D[D.indexOf(o)]=e});
-   S.all=D;S.pick=MW.BK.map(([lo,hi,lab])=>{const c=D.filter(e=>e.h>=lo&&e.h<hi);if(!c.length)return null;const e=c.find(x=>x.vol>0)||c[0];return Object.assign({lab},e)}).filter(Boolean);
+   S.all=D;S.pick=MW.BK.map(([lo,hi,lab])=>{const c=D.filter(e=>e.h>=lo&&e.h<hi);if(!c.length)return null;const cov=x=>x.c.P[0]>=.5&&x.c.P[x.c.P.length-1]<=.5;const e=c.find(x=>cov(x)&&x.vol>0)||c.find(cov)||c.find(x=>x.vol>0)||c[0];return Object.assign({lab},e)}).filter(Boolean);
    S.at=Date.now();S.err=null;
    try{if(a!=='XAU'){const [u,e]=await Promise.all(['USD','EUR'].map(q=>fetch(`https://api.exchange.coinbase.com/products/BTC-${q}/ticker`,{cache:'no-store'}).then(r=>r.json())));const r=parseFloat(u.price)/parseFloat(e.price);if(r>0&&isFinite(r))MW.eurusd=r}}catch(e){}
   }catch(e){S.err=e&&e.message==='Failed to fetch'||e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},

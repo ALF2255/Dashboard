@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.12.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.12.1 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -18,6 +18,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple
 .up{color:var(--up)}.dn{color:var(--dn)}
 select,button{font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;cursor:pointer}
 canvas{width:100%;display:block}
+#chartCard.big{position:fixed;inset:0;z-index:9999;border-radius:0;overflow:auto;background:var(--card,#fff)}#chartCard.big #cv{height:calc(100vh - 300px);min-height:340px}#chartCard.big #cm{height:120px}body.bigOn{overflow:hidden}
 #cv{height:340px;touch-action:pan-y;cursor:grab}.zb{display:flex;gap:6px;align-items:center;margin:4px 0;flex-wrap:wrap}.zb button{padding:3px 10px;font-size:13px}#cm{height:100px;margin-top:2px}#botCv{height:250px;margin-top:6px}#rbCv{height:260px;margin-top:6px}#fzCv{height:90px;margin-top:6px}
 .sig{font-size:28px;font-weight:700}
 .kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
@@ -47,7 +48,7 @@ label.f{display:block}
 <div class="wrap">
 <div class="m" style="text-align:center">LIVE-DASHBOARD · <b id="verLbl"></b> · Stand 20.11.2026 · <span id="syncBadge"></span></div>
 
-<div class="card">
+<div class="card" id="chartCard">
   <div class="row"><span class="m" id="srcLbl">● LIVE · COINBASE SPOT</span>
     <select id="pair"><option value="BTC-USD">BTC / USD</option><option value="BTC-EUR">BTC / EUR</option><option value="ETH-USD">Ethereum (ETH / USD)</option><option value="ETH-EUR">Ethereum (ETH / EUR)</option><option value="ZEC-USD">Zcash (ZEC / USD)</option><option value="XAU-USD">Gold (XAU / USD)</option><option value="XAG-USD">Silber (XAG / USD)</option></select></div>
   <div class="price" id="price">–</div>
@@ -68,7 +69,7 @@ label.f{display:block}
     <label><input type="checkbox" id="tEw" checked>Elliott-Wellen</label>
     <select id="ewSens" style="padding:2px 6px;font-size:11px;border-radius:99px"><option value="2.5">Wellen fein</option><option value="3.5" selected>Wellen mittel</option><option value="5">Wellen grob</option></select>
   </div>
-  <div class="zb"><button id="zOut" title="Herauszoomen">−</button><button id="zIn" title="Hineinzoomen">+</button><button id="zL" title="Zurück in der Zeit">◀</button><button id="zR" title="Vorwärts">▶</button><button id="zRst">Zurücksetzen</button><span class="m">Preis:</span><button id="vIn" title="Preisachse strecken">＋</button><button id="vOut" title="Preisachse stauchen">−</button><button id="vUp" title="Ausschnitt nach oben">↑</button><button id="vDn" title="Ausschnitt nach unten">↓</button><button id="vAuto">Auto</button><span class="m" id="zInfo"></span></div>
+  <div class="zb"><button id="zOut" title="Herauszoomen">−</button><button id="zIn" title="Hineinzoomen">+</button><button id="zL" title="Zurück in der Zeit">◀</button><button id="zR" title="Vorwärts">▶</button><button id="zRst">Zurücksetzen</button><span class="m">Preis:</span><button id="vIn" title="Preisachse strecken">＋</button><button id="vOut" title="Preisachse stauchen">−</button><button id="vUp" title="Ausschnitt nach oben">↑</button><button id="vDn" title="Ausschnitt nach unten">↓</button><button id="vAuto">Auto</button><button id="bigBtn" title="Kursfenster groß / klein (Esc schließt)">⛶ Groß</button><span class="m" id="zInfo"></span></div>
   <canvas id="cv"></canvas>
   <canvas id="cm"></canvas>
   <div class="m" id="legend"></div>
@@ -382,7 +383,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.12.0';
+const VERSION='v3.12.1';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2806,6 +2807,11 @@ function mwlRender(){const tb=$('mwlTb'),tc=$('mwlCmp');if(!tb)return;const a=mw
  $('mwlInfo').textContent=`${a==='XAU'?'Gold':a}: ${all.length} Schnappschüsse gespeichert (${SR.map(x=>MW.SN[x]+' '+all.filter(r=>rsrc(r)===x).length).join(', ')||'–'}), ${dn} schon gegen den Abrechnungskurs geprüft.`+(dn<30?' Aussagekräftig wird es erst ab etwa 30 Prüfungen je Zeile.':'')}
 setInterval(()=>{try{mwLogAll();mwlCheck();mwlRender()}catch(_){}},60e3);setTimeout(()=>{try{mwLogAll()}catch(_){}},8000);setTimeout(()=>{try{mwlRender()}catch(_){}},2000);
 
+// v3.12.1 Kursfenster groß (Knopf „⛶ Groß“, Esc schließt). Nur Anzeige.
+(function(){const b=$('bigBtn'),c=$('chartCard');if(!b||!c)return;
+ const set=on=>{c.classList.toggle('big',on);document.body.classList.toggle('bigOn',on);b.textContent=on?'✕ Klein':'⛶ Groß';if(lastDrawA)draw(lastDrawA);if(on)c.scrollTop=0;else c.scrollIntoView({block:'start'})};
+ b.onclick=()=>set(!c.classList.contains('big'));
+ addEventListener('keydown',e=>{if(e.key==='Escape'&&c.classList.contains('big'))set(false)})})();
 init().then(()=>{syRender();if(SY.tok&&SY.role!=='off')syLoop(true)});setInterval(tick,2000);addEventListener('resize',render);
 </script>
 </body>

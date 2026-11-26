@@ -62,6 +62,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.10.3 | Eigene Karte „Hoch/Tief-Wetten“: Kalshi-Wetten auf Höchst- und Tiefststände bis Tag/Woche/Monat/Jahr (90 % · 50 % · 10 %) – nur Anzeige |
 | v3.11.0 | Robuste Strategiewahl im Walk-Forward (mind. 15 Trades, Wahl nach t-Wert), abschaltbar |
 | v3.12.0 | Marktwetten und Hoch/Tief-Wetten zusätzlich von **Polymarket** (Auswahl Kalshi / Polymarket / Beide); Protokoll schreibt beide Börsen mit (Polymarket geprüft mit dem Binance-Schlusskurs zum Termin) |
+| v3.12.1 | Kursfenster per Knopf **„⛶ Groß“** bildschirmfüllend (Esc oder „✕ Klein“ schließt) |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

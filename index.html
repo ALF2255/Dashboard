@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.11.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.12.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -148,22 +148,22 @@ label.f{display:block}
 </div>
 
 <div class="card" id="mwCard">
-  <div class="row"><div class="m" id="mwLabel">MARKTWETTEN · KALSHI</div><button id="mwRun" style="padding:8px 12px">Aktualisieren</button></div>
-  <div class="note" style="margin:6px 0">Was Händler auf der US-Prognosebörse Kalshi für den Kurs zu festen Terminen einpreisen – von der nächsten Stunde bis Jahresende. Nur Anzeige, der Bot nutzt es nicht.</div>
+  <div class="row"><div class="m" id="mwLabel">MARKTWETTEN</div><select id="mwSrc" title="Quelle der Wettdaten" style="margin-left:auto;margin-right:8px"><option value="K">Kalshi</option><option value="P">Polymarket</option><option value="B">Beide</option></select><button id="mwRun" style="padding:8px 12px">Aktualisieren</button></div>
+  <div class="note" style="margin:6px 0">Was Händler auf den Prognosebörsen Kalshi und Polymarket für den Kurs zu festen Terminen einpreisen – von der nächsten Stunde bis Jahresende. Nur Anzeige, der Bot nutzt es nicht.</div>
   <div id="mwBox"><div class="note">lädt…</div></div>
   <div class="m" style="margin-top:14px">TREFFERPROTOKOLL</div>
   <div class="note" id="mwlInfo" style="margin:4px 0"></div>
   <table><thead><tr><th>TERMIN</th><th>GEPRÜFT</th><th>IM 80 %-BEREICH</th><th>RICHTUNG</th><th>MITTE VS. „BLEIBT GLEICH“</th></tr></thead><tbody id="mwlTb"></tbody></table>
   <div class="m" style="margin-top:10px">SZENARIEN GEGEN MARKT (FEHLERWERT, KLEINER = BESSER)</div>
   <table><thead><tr><th>HORIZONT</th><th>GEPRÜFT</th><th>SZENARIEN</th><th>MARKT</th><th>BESSER</th></tr></thead><tbody id="mwlCmp"></tbody></table>
-  <div class="note" style="margin-top:6px">Jede Stunde wird für Bitcoin und Gold festgehalten (egal welches Instrument gerade gewählt ist), was der Markt für die Termine einpreist (nur am Hauptgerät, solange das Dashboard offen ist; über die Synchronisierung auch auf den anderen Geräten sichtbar). Nach dem Termin wird mit dem offiziellen Kalshi-Abrechnungskurs geprüft: Lag er im 80 %-Bereich (ideal: etwa 80 %)? Stimmte die Richtung? War die Mitte näher dran als „Kurs bleibt gleich“? Im Vergleich mit „Szenarien“ zählt der Fehlerwert (Brier): 0 = perfekt, je kleiner desto besser. Dieser Vergleich wird nur für das gerade gewählte Instrument mitgeschrieben, weil die Szenarien nur dafür berechnet werden.</div>
+  <div class="note" style="margin-top:6px">Jede Stunde wird für Bitcoin und Gold festgehalten – von Kalshi und Polymarket, egal welches Instrument und welche Quelle gerade gewählt ist –, was der Markt für die Termine einpreist (nur am Hauptgerät, solange das Dashboard offen ist; über die Synchronisierung auch auf den anderen Geräten sichtbar). Nach dem Termin wird geprüft (Kalshi: offizieller Abrechnungskurs, Polymarket: Binance-Schlusskurs zum Termin): Lag er im 80 %-Bereich (ideal: etwa 80 %)? Stimmte die Richtung? War die Mitte näher dran als „Kurs bleibt gleich“? Im Vergleich mit „Szenarien“ zählt der Fehlerwert (Brier): 0 = perfekt, je kleiner desto besser. Dieser Vergleich wird nur für das gerade gewählte Instrument mitgeschrieben, weil die Szenarien nur dafür berechnet werden.</div>
   <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Umweg-Adresse (nur nötig, wenn der Abruf blockiert wird)</summary>
     <input id="mwProxy" placeholder="z. B. http://192.168.1.20:8080/?url=" style="width:100%;margin-top:6px;box-sizing:border-box">
     <div class="note" style="margin-top:4px">Die Kalshi-Adresse wird kodiert hinten angehängt. Leer lassen = direkt abrufen. Wird nur in diesem Browser gespeichert.</div></details>
-  <div class="note" style="margin-top:8px"><b>So liest du es:</b> „Mitte“ = Kurs, bei dem der Markt 50:50 steht. „80 %-Bereich“ = dort landet der Kurs zum Termin laut Markt mit 80 % Wahrscheinlichkeit. „Höher als jetzt“ = Chance, dass der Kurs zum Termin über dem aktuellen liegt. Die Zahlen kommen aus den Preisen der Ja/Nein-Kontrakte (Mitte aus Geld- und Briefkurs). Kalshi rechnet mit dem Durchschnittskurs der letzten Minute vor dem Termin (CF Benchmarks bzw. Gold-Index). Im Vergleich werden dieselben Schwellen wie in „Szenarien“ verwendet; liegt der Kalshi-Termin nicht genau auf dem Horizont, ist der Vergleich nur ungefähr. Märkte mit wenig Handel können danebenliegen.</div>
+  <div class="note" style="margin-top:8px"><b>So liest du es:</b> „Mitte“ = Kurs, bei dem der Markt 50:50 steht. „80 %-Bereich“ = dort landet der Kurs zum Termin laut Markt mit 80 % Wahrscheinlichkeit. „Höher als jetzt“ = Chance, dass der Kurs zum Termin über dem aktuellen liegt. Die Zahlen kommen aus den Preisen der Ja/Nein-Kontrakte (Mitte aus Geld- und Briefkurs). Kalshi rechnet mit dem Durchschnittskurs der letzten Minute vor dem Termin (CF Benchmarks bzw. Gold-Index), Polymarket mit dem Binance-Schlusskurs der 1-Minuten-Kerze zum Termin (meist 12 Uhr New York = 18 Uhr bei uns). Im Vergleich werden dieselben Schwellen wie in „Szenarien“ verwendet; liegt der Kalshi-Termin nicht genau auf dem Horizont, ist der Vergleich nur ungefähr. Märkte mit wenig Handel können danebenliegen.</div>
 </div>
 <div class="card" id="htCard">
-  <div class="row"><div class="m" id="htLabel">HOCH/TIEF-WETTEN · KALSHI</div><button id="htRun" style="padding:8px 12px">Aktualisieren</button></div>
+  <div class="row"><div class="m" id="htLabel">HOCH/TIEF-WETTEN</div><select id="htSrc" title="Quelle der Wettdaten" style="margin-left:auto;margin-right:8px"><option value="K">Kalshi</option><option value="P">Polymarket</option><option value="B">Beide</option></select><button id="htRun" style="padding:8px 12px">Aktualisieren</button></div>
   <div class="note" style="margin:6px 0">Wetten darauf, ob der Kurs <b>bis</b> zum Termin <b>irgendwann</b> eine Marke erreicht – nicht, wo er am Termin steht. Daraus: welche Hochs und Tiefs der Markt bis dahin erwartet. Nur Anzeige.</div>
   <div id="htBox"><div class="note">lädt…</div></div>
   <div class="note" style="margin-top:8px"><b>So liest du es:</b> „90 %“ = diese Marke wird fast sicher noch erreicht, „50 %“ = 50:50, „10 %“ = nur geringe Chance. Beim Höchststand gilt: Liegt die 90-%-Marke schon nahe am aktuellen Kurs, erwartet der Markt kaum weiteren Anstieg. Beim Tiefststand entsprechend umgekehrt.</div>
@@ -382,7 +382,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.11.0';
+const VERSION='v3.12.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2554,7 +2554,7 @@ const MW={
  // Es laufen nur öffentliche Marktdaten darüber, keine Schlüssel. Eigene Umweg-Adresse hat Vorrang.
  RELAYS:['https://kalshi.moberlaender71.workers.dev/?url=','','https://corsproxy.io/?url=','https://api.allorigins.win/raw?url=','https://api.codetabs.com/v1/proxy/?quest='],
  route:null, // eigener Cloudflare-Weiterleiter des Nutzers steht vorn (seit 25.11.)
- async get(p){const u=MW.base+p,own=MW.prox();let ord;
+ async get(p){const u=/^https?:/.test(p)?p:MW.base+p,own=MW.prox();let ord;
   if(own)ord=[own];else{if(MW.route==null)try{MW.route=localStorage.getItem('mw:route')}catch(e){}ord=MW.RELAYS.slice();const r=MW.route;if(r!=null&&ord.includes(r)){ord.splice(ord.indexOf(r),1);ord.unshift(r)}}
   let err;for(const pr of ord){const ac=typeof AbortController!=='undefined'?new AbortController():null,to=ac?setTimeout(()=>ac.abort(),own?20000:8000):0;
    try{const r=await fetch(pr?pr+encodeURIComponent(u):u,{cache:'no-store',signal:ac?ac.signal:undefined});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();
@@ -2596,6 +2596,11 @@ const MW={
   try{const o=JSON.parse(localStorage.getItem(k)||'null');if(o&&Date.now()-o.t<864e5)L=o.l}catch(e){}
   if(!L){try{const j=await MW.get('/series?category='+encodeURIComponent(C.c));L=(j.series||[]).map(x=>x&&x.ticker).filter(Boolean);try{localStorage.setItem(k,JSON.stringify({t:Date.now(),l:L}))}catch(e){}}catch(e){L=[]}}
   return L.filter(t=>t.startsWith(C.p)&&/^(|D|H|HA|W|W2|M|MON|MON2|Y|EOY)$/.test(t.slice(C.p.length)))},
+ // Termine je Zeitfenster auswählen (Kalshi und Polymarket gleich): gleicher Termin bei mehreren Serien → die mit mehr Handel
+ finish(S,L){L.sort((x,y)=>x.ct-y.ct);const D=[];L.forEach(e=>{const o=D.find(d=>Math.abs(d.ct-e.ct)<30*60e3);if(!o)D.push(e);else if(e.vol>o.vol)D[D.indexOf(o)]=e});
+  S.all=D;S.pick=MW.BK.map(([lo,hi,lab])=>{const c=D.filter(e=>e.h>=lo&&e.h<hi);if(!c.length)return null;const cov=x=>x.c.P[0]>=.5&&x.c.P[x.c.P.length-1]<=.5;const e=c.find(x=>cov(x)&&x.vol>0)||c.find(cov)||c.find(x=>x.vol>0)||c[0];return Object.assign({lab},e)}).filter(Boolean)},
+ finishT(S,L){S.rows=[];['max','min'].forEach(kd=>[[0,30,'Tag'],[30,192,'Woche'],[192,1080,'Monat'],[1080,9600,'Jahr']].forEach(([lo,hi,lab])=>{
+  const c=L.filter(e=>e.kind===kd&&e.h>=lo&&e.h<hi).sort((x,y)=>x.ct-y.ct||y.vol-x.vol);if(c.length)S.rows.push(Object.assign({lab},c[0]))}))},
  async load(a,force){const S=MW.S[a]||(MW.S[a]={});if(S.busy||(!force&&S.at&&Date.now()-S.at<120e3))return S;S.busy=true;
   try{const ser=[...new Set([...MW.cfg(a).s,...(await MW.discover(a))])].slice(0,10),ev={};let ok=0,err=null;
    for(const st of ser){try{const ms=await MW.series(st);ok++;ms.forEach(m=>{const e=m.event_ticker||m.ticker;(ev[e]||(ev[e]={id:e,st,ms:[]})).ms.push(m)})}catch(e){err=e;if(!ok)break}} // erster Abruf scheitert ganz → nicht alle Serien durchprobieren
@@ -2603,9 +2608,7 @@ const MW={
    const now=Date.now(),L=[];
    Object.values(ev).forEach(e=>{const ct=Date.parse(e.ms[0].close_time||e.ms[0].expected_expiration_time||'');if(!isFinite(ct)||ct<=now)return;
     const c=MW.curve(e.ms);if(!c)return;L.push({id:e.id,st:e.st,ct,h:(ct-now)/36e5,c,vol:e.ms.reduce((s,m)=>s+MW.vol(m),0),n:e.ms.length})});
-   // gleicher Termin bei mehreren Serien (Leiter + Spanne): die mit mehr Handel nehmen
-   L.sort((x,y)=>x.ct-y.ct);const D=[];L.forEach(e=>{const o=D.find(d=>Math.abs(d.ct-e.ct)<30*60e3);if(!o)D.push(e);else if(e.vol>o.vol)D[D.indexOf(o)]=e});
-   S.all=D;S.pick=MW.BK.map(([lo,hi,lab])=>{const c=D.filter(e=>e.h>=lo&&e.h<hi);if(!c.length)return null;const cov=x=>x.c.P[0]>=.5&&x.c.P[x.c.P.length-1]<=.5;const e=c.find(x=>cov(x)&&x.vol>0)||c.find(cov)||c.find(x=>x.vol>0)||c[0];return Object.assign({lab},e)}).filter(Boolean);
+   MW.finish(S,L);
    S.at=Date.now();S.err=null;
    try{if(MW.cfg(a).c==='Crypto'){const [u,e]=await Promise.all(['USD','EUR'].map(q=>fetch(`https://api.exchange.coinbase.com/products/BTC-${q}/ticker`,{cache:'no-store'}).then(r=>r.json())));const r=parseFloat(u.price)/parseFloat(e.price);if(r>0&&isFinite(r))MW.eurusd=r}}catch(e){}
   }catch(e){S.err=e&&e.message==='Failed to fetch'||e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},
@@ -2622,14 +2625,58 @@ const MW={
    if(!ok&&err)throw err;
    const now=Date.now(),L=[];Object.values(ev).forEach(e=>{const ct=Date.parse(e.ms[0].close_time||e.ms[0].expected_expiration_time||'');if(!isFinite(ct)||ct<=now)return;
     const c=MW.curve(e.ms);if(!c)return;L.push({id:e.id,st:e.st,kind:e.kind,ct,h:(ct-now)/36e5,c,vol:e.ms.reduce((x,m)=>x+MW.vol(m),0)})});
-   S.rows=[];['max','min'].forEach(kd=>[[0,30,'Tag'],[30,192,'Woche'],[192,1080,'Monat'],[1080,9600,'Jahr']].forEach(([lo,hi,lab])=>{
-    const c=L.filter(e=>e.kind===kd&&e.h>=lo&&e.h<hi).sort((x,y)=>x.ct-y.ct||y.vol-x.vol);if(c.length)S.rows.push(Object.assign({lab},c[0]))}));
+   MW.finishT(S,L);
    S.at=Date.now();S.err=null}
   catch(e){S.err=e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=Date.now()}finally{S.busy=false}return S},
  // p90 = wird mit 90 % erreicht, p50 = 50:50, p10 = nur 10 % Chance
  // edge: nächstliegende Stufe der Leiter und Chance, sie zu erreichen (für den Fall, dass die Marken außerhalb der Leiter liegen)
  tstats(e){const c=e.c,n=c.K.length,r=e.kind==='max'?{p90:MW.q(c,.9),p50:MW.q(c,.5),p10:MW.q(c,.1),edge:{k:c.K[0],p:c.P[0]}}:{p90:MW.q(c,.1),p50:MW.q(c,.5),p10:MW.q(c,.9),edge:{k:c.K[n-1],p:1-c.P[n-1]}};
   r.out=!!(r.p50.lt||r.p50.gt);return r},
+ // ---- Polymarket (Gamma-API, öffentlich) – zweite Quelle, gleiche Rechnung wie Kalshi ----
+ // Ereignisse: „Bitcoin above ___ on …?“ (Leiter), „Bitcoin price on …?“ (Spannen), „What price will Bitcoin hit …?“ (↑ Hoch / ↓ Tief).
+ // Jeder Polymarket-Markt wird in ein Kalshi-ähnliches Objekt übersetzt (strike_type, floor/cap_strike, Geld/Brief, letzter Preis).
+ PMB:'https://gamma-api.polymarket.com',
+ PMN:{BTC:'Bitcoin',ETH:'Ethereum',SOL:'Solana',ZEC:'Zcash',XRP:'XRP',DOGE:'Dogecoin',XAU:'Gold',XAG:'Silver'},
+ pmName(a){return MW.PMN[a]||null},
+ pmKind(t,n){t=(t||'').toLowerCase();n=n.toLowerCase();if(!t.includes(n))return null;if(/what price will .* hit/.test(t))return'touch';
+  if(t.includes(n+' above'))return'above';if(t.includes(n+' price on')||t.includes(n+' price at'))return'range';return null},
+ pnum(x){x=String(x==null?'':x).replace(/[$\s]/g,'').replace(/,/g,'');const m=/^([\d.]+)(k|m)?$/i.exec(x);if(!m)return null;let v=parseFloat(m[1]);if(m[2])v*=m[2].toLowerCase()==='k'?1e3:1e6;return isFinite(v)?v:null},
+ pmMk(m,id,ct){let op=[];try{op=typeof m.outcomePrices==='string'?JSON.parse(m.outcomePrices):(m.outcomePrices||[])}catch(e){}
+  const f=v=>v==null||v===''?undefined:String(v);
+  return{event_ticker:id,yes_bid_dollars:f(m.bestBid),yes_ask_dollars:f(m.bestAsk),last_price_dollars:f(op.length?op[0]:m.lastTradePrice),volume_fp:f(m.volumeNum!=null?m.volumeNum:m.volume)||'0',close_time:m.endDate||ct}},
+ pmParse(e,n){const k=MW.pmKind(e.title,n),out={px:[],mx:[],mn:[]};
+  (e.markets||[]).filter(m=>m&&!m.closed&&m.active!==false).forEach(m=>{const g=String(m.groupItemTitle||'').trim(),q=String(m.question||''),o=MW.pmMk(m,'PM:'+e.slug,e.endDate);let r;
+   if(k==='above'){const v=MW.pnum(g.replace(/^[>≥]\s*/,''))??MW.pnum((/\$([\d.,]+k?)/i.exec(q)||[])[1]);if(v!=null){o.strike_type='greater';o.floor_strike=v;out.px.push(o)}}
+   else if(k==='range'){if(r=/^(?:[<≤]|below|under)\s*\$?([\d.,]+k?)/i.exec(g)){o.strike_type='less';o.cap_strike=MW.pnum(r[1])}
+    else if(r=/^(?:[>≥]|above|over)\s*\$?([\d.,]+k?)/i.exec(g)){o.strike_type='greater';o.floor_strike=MW.pnum(r[1])}
+    else if(r=/\$?([\d.,]+k?)\s*[-–]\s*\$?([\d.,]+k?)/i.exec(g)){o.strike_type='between';o.floor_strike=MW.pnum(r[1]);o.cap_strike=MW.pnum(r[2])}
+    if(o.strike_type)out.px.push(o)}
+   else if(k==='touch'){const dn=/^↓|dip|below|fall/i.test(g)||/\b(dip|fall|drop)\b/i.test(q),up=!dn&&(/^↑|above|reach/i.test(g)||/\b(reach|hit|above)\b/i.test(q));
+    const v=MW.pnum(g.replace(/^[↑↓]\s*/,'').replace(/^(above|below|reach|dip to)\s*/i,''))??MW.pnum((/\$([\d.,]+k?)/i.exec(q)||[])[1]);if(v==null)return;
+    if(dn){o.strike_type='less';o.cap_strike=v;o.event_ticker+=':min';out.mn.push(o)}else if(up){o.strike_type='greater';o.floor_strike=v;o.event_ticker+=':max';out.mx.push(o)}}});
+  return out},
+ async pmEvents(a){const n=MW.pmName(a);if(!n)return[];const slugs=new Set();let ok=0,err=null;
+  for(const q of [n+' above',n+' price on','what price will '+n+' hit']){
+   try{const j=await MW.get(MW.PMB+'/public-search?q='+encodeURIComponent(q)+'&events_status=active&limit_per_type=30');ok++;
+    (j.events||[]).forEach(e=>{if(e&&e.slug&&!e.closed&&MW.pmKind(e.title,n))slugs.add(e.slug)})}catch(e){err=e;if(!ok)break}}
+  if(!ok)throw err||new Error('keine Antwort');const L=[...slugs].slice(0,40),out=[];
+  for(let i=0;i<L.length;i+=10){const j=await MW.get(MW.PMB+'/events?'+L.slice(i,i+10).map(x=>'slug='+encodeURIComponent(x)).join('&'));(Array.isArray(j)?j:(j.events||j.data||[])).forEach(e=>out.push(e))}
+  return out},
+ // lädt Kurswetten (MW.S['P:'+a]) und Hoch/Tief-Wetten (MW.S['PT:'+a]) von Polymarket in einem Durchgang
+ async loadPM(a,force){const S=MW.S['P:'+a]||(MW.S['P:'+a]={}),T=MW.S['PT:'+a]||(MW.S['PT:'+a]={});if(S.busy||(!force&&S.at&&Date.now()-S.at<120e3))return S;S.busy=T.busy=true;
+  try{const n=MW.pmName(a),E=n?await MW.pmEvents(a):[],now=Date.now(),L=[],TL=[];
+   E.forEach(e=>{const p=MW.pmParse(e,n);
+    const add=(ms,arr,kind)=>{if(ms.length<3)return;const t=Date.parse(ms[0].close_time||e.endDate||'');if(!isFinite(t)||t<=now)return;const c=MW.curve(ms);if(!c)return;
+     arr.push({id:ms[0].event_ticker,st:'PM',src:'P',kind,ct:t,h:(t-now)/36e5,c,vol:ms.reduce((x,m)=>x+MW.vol(m),0),n:ms.length})};
+    add(p.px,L);add(p.mx,TL,'max');add(p.mn,TL,'min')});
+   MW.finish(S,L);MW.finishT(T,TL);S.at=T.at=Date.now();S.err=T.err=null;S.none=T.none=!n}
+  catch(e){S.err=T.err=e instanceof TypeError?'cors':(e&&e.message||'Fehler');S.at=T.at=Date.now()}finally{S.busy=T.busy=false}return S},
+ async loadTouchPM(a,force){await MW.loadPM(a,force);return MW.S['PT:'+a]},
+ // Quelle wählen: K = Kalshi, P = Polymarket, B = beide (im Browser gemerkt)
+ src(){try{return localStorage.getItem('mw:src')||'K'}catch(e){return'K'}},
+ setSrc(v){try{localStorage.setItem('mw:src',v)}catch(e){}},
+ srcs(){const v=MW.src();return v==='B'?['K','P']:[v]},
+ SN:{K:'Kalshi',P:'Polymarket'},
  stats(e,spot){const c=e.c,m=MW.q(c,.5),lo=MW.q(c,.9),hi=MW.q(c,.1),pa=spot>0?MW.pGt(c,spot):null;return{m,lo,hi,pa}},
  when(t){const d=new Date(t),now=new Date(),same=d.toDateString()===now.toDateString(),tm=d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
   if(same)return'heute '+tm;const tom=new Date(now.getTime()+864e5);if(d.toDateString()===tom.toDateString())return'morgen '+tm;
@@ -2637,99 +2684,117 @@ const MW={
  inH(h){return h<1?'in '+Math.max(1,Math.round(h*60))+' Min':h<48?'in '+Math.round(h)+' Std':'in '+Math.round(h/24)+' Tagen'},
  errTxt(s){return(s.err==='cors'||s.err==='Zeitüberschreitung'||/^HTTP/.test(s.err)?'Kalshi war weder direkt noch über die öffentlichen Weiterleiter erreichbar'+(MW.prox()?' (auch nicht über deine Umweg-Adresse)':'')+'.':'Abruf fehlgeschlagen ('+s.err+').')+' Nächster Versuch in 2 Minuten. Dauerhafte Abhilfe: eigene Umweg-Adresse eintragen (z. B. Weiterleiter auf deinem NAS).'}
 };
-// v3.10.0 Marktwetten-Karte: zeigt Kalshi-Einpreisung und vergleicht mit der Karte „Szenarien“ (nur Anzeige, Bot unverändert)
+// v3.12.0 Marktwetten aus Kalshi und/oder Polymarket (Auswahl „Quelle“, gemerkt in mw:src). Nur Anzeige, Bot unverändert.
 const mwAsset=()=>pair.startsWith('BTC')?'BTC':pair.startsWith('ETH')?'ETH':pair==='XAU-USD'?'XAU':null;
 const mwToUsd=()=>pair.endsWith('EUR')?(MW.eurusd||null):1;
-// Vergleich Szenarien ↔ Markt: gleiche Schwellen (relativ zum Kurs), Kalshi-Termin möglichst nah am Horizont
+const MWKEY={K:a=>a,P:a=>'P:'+a},HTKEY={K:a=>'T:'+a,P:a=>'PT:'+a};
+const mwLoad=(src,a,f)=>src==='P'?MW.loadPM(a,f):MW.load(a,f),htLoad=(src,a,f)=>src==='P'?MW.loadPM(a,f):MW.loadTouch(a,f);
+// Vergleich Szenarien ↔ Markt: gleiche Schwellen (relativ zum Kurs), Markt-Termin möglichst nah am Horizont
 function mwCmp(S,spot){const o=[];if(SCEN_PAIR!==pair||!spot||!last||!S||!S.all)return o;
  [['4h',4,1,10],['7d',168,72,264],['28d',672,432,960]].forEach(([key,hh,lo,hi])=>{const L=SCEN_LV[key];if(!L)return;
   const c=S.all.filter(e=>e.h>=lo&&e.h<=hi).sort((x,y)=>Math.abs(x.h-hh)-Math.abs(y.h-hh))[0];if(!c)return;
   const upU=L.up/last*spot,dnU=L.dn/last*spot,pu=MW.pGt(c.c,upU),pd=MW.pGt(c.c,dnU),mu=Math.round(pu.p*100),md=Math.round((1-pd.p)*100),ms=Math.max(0,100-mu-md),edge=!!(pu.ge||pu.le||pd.ge||pd.le);
   o.push({key,L,c,upU,dnU,mu,ms,md,edge})});return o}
-function mwRender(){const box=$('mwBox');if(!box)return;const a=mwAsset();
- $('mwLabel').textContent='MARKTWETTEN · KALSHI · '+pair;
- if(!a){box.innerHTML='<div class="note">Für dieses Instrument gibt es auf Kalshi keine passenden Kursmärkte (nur Bitcoin, Ethereum und Gold).</div>';return}
- const S=MW.S[a];if(!S||(!S.at&&S.busy)||!S.at){box.innerHTML='<div class="note">lädt…</div>';return}
- if(S.err){box.innerHTML=`<div class="note dn">${MW.errTxt(S)}</div>`;return}
- if(!S.pick||!S.pick.length){box.innerHTML='<div class="note">Gerade keine offenen Märkte gefunden.</div>';return}
+const mwHead=src=>MW.srcs().length>1?`<div class="m" style="margin:12px 0 4px;color:var(--ink)"><b>${MW.SN[src]}</b></div>`:'';
+function mwSec(src,a){const S=MW.S[MWKEY[src](a)],nm=MW.SN[src];
+ if(!S||!S.at)return'<div class="note">lädt…</div>';
+ if(S.err)return`<div class="note dn">${nm}: ${MW.errTxt(S)}</div>`;
+ if(!S.pick||!S.pick.length)return`<div class="note">${nm}: gerade keine offenen Kursmärkte gefunden.</div>`;
  const k=mwToUsd(),spot=last!=null&&k?last*k:null,dec=last!=null&&last<500?2:0,
-  P=v=>k?fmt(v/k,dec):'$'+v.toLocaleString('de-DE',{maximumFractionDigits:dec}),
-  Q=(o,pre)=>(o.lt?'unter ':o.gt?'über ':'')+P(o.v),pc=v=>Math.round(v*100)+' %';
+  P=v=>k?fmt(v/k,dec):'$'+v.toLocaleString('de-DE',{maximumFractionDigits:dec}),Q=o=>(o.lt?'unter ':o.gt?'über ':'')+P(o.v),pc=v=>Math.round(v*100)+' %';
  const rows=S.pick.map(e=>{const s=MW.stats(e,spot);const pa=s.pa?(s.pa.ge?'≥ ':s.pa.le?'≤ ':'')+pc(s.pa.p):'–',up=s.pa&&s.pa.p>.52,dnx=s.pa&&s.pa.p<.48;
   return`<tr><td>${e.lab}<div class="m">${MW.when(e.ct)} · ${MW.inH(e.h)}</div></td><td>${Q(s.m)}</td><td>${Q(s.lo)} – ${Q(s.hi)}</td><td class="${up?'up':dnx?'dn':''}">${pa}</td></tr>`}).join('');
- // Vergleich mit „Szenarien“: gleiche Schwellen, Termin möglichst nah am Horizont der Karte
  const cmp=mwCmp(S,spot).map(({L,c,mu,ms,md,edge})=>`<tr><td>${L.title}<div class="m">Markt: ${MW.when(c.ct)}</div></td><td><span class="up">▲ ${L.a}</span> · ${L.b} · <span class="dn">▼ ${L.c}</span></td><td><span class="up">▲ ${mu}</span> · ${ms} · <span class="dn">▼ ${md}</span>${edge?' <span class="m">(Rand der Leiter)</span>':''}</td></tr>`);
- box.innerHTML=`<table><thead><tr><th>TERMIN</th><th>MITTE</th><th>80 %-BEREICH</th><th>HÖHER ALS JETZT</th></tr></thead><tbody>${rows}</tbody></table>`+
-  (cmp.length?`<div class="m" style="margin-top:12px">VERGLEICH MIT „SZENARIEN“ (BULLISCH · SEITWÄRTS · BÄRISCH IN %)</div><table><thead><tr><th>HORIZONT</th><th>MODELL</th><th>MARKT</th></tr></thead><tbody>${cmp.join('')}</tbody></table>`:'')+
-  `<div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')} · ${S.all.length} offene Termine${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
-async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();try{mwlRender()}catch(_){}return}const p=MW.load(a,force);mwRender();await p;mwRender();try{mwLogAll();mwlRender()}catch(_){}}
+ return`<table><thead><tr><th>TERMIN</th><th>MITTE</th><th>80 %-BEREICH</th><th>HÖHER ALS JETZT</th></tr></thead><tbody>${rows}</tbody></table>`+
+  (cmp.length?`<div class="m" style="margin-top:12px">VERGLEICH MIT „SZENARIEN“ (BULLISCH · SEITWÄRTS · BÄRISCH IN %)</div><table><thead><tr><th>HORIZONT</th><th>MODELL</th><th>${nm.toUpperCase()}</th></tr></thead><tbody>${cmp.join('')}</tbody></table>`:'')+
+  `<div class="m" style="margin-top:6px">${nm} · Stand ${new Date(S.at).toLocaleTimeString('de-DE')} · ${S.all.length} offene Termine${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
+function mwSrcUI(){['mwSrc','htSrc'].forEach(id=>{const e=$(id);if(e)e.value=MW.src()})}
+function mwRender(){const box=$('mwBox');if(!box)return;const a=mwAsset();mwSrcUI();
+ $('mwLabel').textContent='MARKTWETTEN · '+MW.srcs().map(x=>MW.SN[x].toUpperCase()).join(' + ')+' · '+pair;
+ if(!a){box.innerHTML='<div class="note">Für dieses Instrument gibt es keine passenden Kursmärkte (nur Bitcoin, Ethereum und Gold).</div>';return}
+ box.innerHTML=MW.srcs().map(src=>mwHead(src)+mwSec(src,a)).join('')}
+async function mwRefresh(force){const a=mwAsset();if(!a){mwRender();try{mwlRender()}catch(_){}return}
+ const ps=MW.srcs().map(src=>mwLoad(src,a,force));mwRender();await Promise.all(ps);mwRender();try{htRender();mwLogAll();mwlRender()}catch(_){}}
 $('mwRun').onclick=()=>mwRefresh(true);
 $('mwProxy').value=MW.prox();$('mwProxy').onchange=()=>{MW.setProx($('mwProxy').value);mwRefresh(true)};
+['mwSrc','htSrc'].forEach(id=>{const e=$(id);if(e)e.onchange=()=>{MW.setSrc(e.value);mwRefresh(false);htRefresh(false)}});
 setInterval(()=>mwRefresh(false),20000);setTimeout(()=>mwRefresh(false),1500);
-// v3.10.3 Hoch/Tief-Wetten (eigene Karte): MAX/MIN-Serien von Kalshi
-function htRender(){const box=$('htBox');if(!box)return;const a=mwAsset();$('htLabel').textContent='HOCH/TIEF-WETTEN · KALSHI · '+pair;
- if(!a){box.innerHTML='<div class="note">Für dieses Instrument gibt es auf Kalshi keine Hoch/Tief-Wetten.</div>';return}
- const S=MW.S['T:'+a];if(!S||!S.at){box.innerHTML='<div class="note">lädt…</div>';return}
- if(S.err){box.innerHTML=`<div class="note dn">${MW.errTxt(S)}</div>`;return}
- if(!S.rows||!S.rows.length){box.innerHTML='<div class="note">Gerade keine offenen Hoch/Tief-Wetten gefunden.</div>';return}
+// Hoch/Tief-Wetten (eigene Karte): Kalshi MAX/MIN-Serien bzw. Polymarket „What price will … hit“
+function htSec(src,a){const S=MW.S[HTKEY[src](a)],nm=MW.SN[src];
+ if(!S||!S.at)return'<div class="note">lädt…</div>';
+ if(S.err)return`<div class="note dn">${nm}: ${MW.errTxt(S)}</div>`;
+ if(!S.rows||!S.rows.length)return`<div class="note">${nm}: gerade keine offenen Hoch/Tief-Wetten gefunden.</div>`;
  const k=mwToUsd(),dec=last!=null&&last<500?2:0,P=v=>k?fmt(v/k,dec):'$'+v.toLocaleString('de-DE',{maximumFractionDigits:dec}),Q=o=>(o.lt?'< ':o.gt?'> ':'')+P(o.v);
  const labs=['Tag','Woche','Monat','Jahr'].filter(l=>S.rows.some(r=>r.lab===l));
  const cell=r=>{if(!r)return'<td>–</td>';const t=MW.tstats(r),c=r.kind==='max'?'up':'dn';
   if(t.out)return`<td>${P(t.edge.k)} erreicht:<br><b class="${c}">${t.edge.p<.01?'< 1':Math.round(t.edge.p*100)} %</b><br><span class="m">(Stufen liegen weit weg)</span></td>`;
   return`<td>${Q(t.p90)}<br><b class="${c}">${Q(t.p50)}</b><br><span class="m">${Q(t.p10)}</span></td>`};
- box.innerHTML=`<table><thead><tr><th>BIS</th><th>▲ HÖCHSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th><th>▼ TIEFSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th></tr></thead><tbody>${labs.map(l=>{const mx=S.rows.find(r=>r.lab===l&&r.kind==='max'),mn=S.rows.find(r=>r.lab===l&&r.kind==='min'),t=(mx||mn).ct;
+ return`<table><thead><tr><th>BIS</th><th>▲ HÖCHSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th><th>▼ TIEFSTSTAND<br><span class="m">90 % · 50 % · 10 %</span></th></tr></thead><tbody>${labs.map(l=>{const mx=S.rows.find(r=>r.lab===l&&r.kind==='max'),mn=S.rows.find(r=>r.lab===l&&r.kind==='min'),t=(mx||mn).ct;
   return`<tr><td>${l}<div class="m">${MW.when(t)}</div></td>${cell(mx)}${cell(mn)}</tr>`}).join('')}</tbody></table>
-  <div class="m" style="margin-top:6px">Stand ${new Date(S.at).toLocaleTimeString('de-DE')}${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
-async function htRefresh(force){const a=mwAsset();if(!a){htRender();return}const p=MW.loadTouch(a,force);htRender();await p;htRender()}
+  <div class="m" style="margin-top:6px">${nm} · Stand ${new Date(S.at).toLocaleTimeString('de-DE')}${pair.endsWith('EUR')?' · umgerechnet von USD':''}${MW.via()}</div>`}
+function htRender(){const box=$('htBox');if(!box)return;const a=mwAsset();mwSrcUI();
+ $('htLabel').textContent='HOCH/TIEF-WETTEN · '+MW.srcs().map(x=>MW.SN[x].toUpperCase()).join(' + ')+' · '+pair;
+ if(!a){box.innerHTML='<div class="note">Für dieses Instrument gibt es keine Hoch/Tief-Wetten.</div>';return}
+ box.innerHTML=MW.srcs().map(src=>mwHead(src)+htSec(src,a)).join('')}
+async function htRefresh(force){const a=mwAsset();if(!a){htRender();return}const ps=MW.srcs().map(src=>htLoad(src,a,force));htRender();await Promise.all(ps);htRender()}
 $('htRun').onclick=()=>htRefresh(true);setInterval(()=>htRefresh(false),60000);setTimeout(()=>htRefresh(false),3000);
 
-// v3.10.1 Marktwetten-Protokoll: stündlich Schnappschuss (nur Hauptgerät), Auflösung mit dem offiziellen Kalshi-Abrechnungswert
+// Marktwetten-Protokoll: stündlich Schnappschuss (nur Hauptgerät) für Bitcoin und Gold, Kalshi UND Polymarket (unabhängig von der Anzeige)
+// Auflösung: Kalshi mit dem offiziellen Abrechnungswert, Polymarket mit dem Binance-1-Min-Schlusskurs zum Termin (danach rechnet Polymarket ab; Gold über PAXG).
 const MWK='btcmwlog';
 let MWL=(()=>{try{const r=JSON.parse(localStorage.getItem(MWK));return r&&Array.isArray(r.recs)?r:{recs:[]}}catch(e){return{recs:[]}}})(),mwlBusy=false,mwlAt=0;
 const mwlSave=()=>{try{localStorage.setItem(MWK,JSON.stringify(MWL))}catch(e){}};
-// v3.10.2: Bitcoin und Gold werden immer beide mitgeschrieben – unabhängig vom gewählten Instrument.
-// Kurs in USD: beim gewählten Instrument der Live-Kurs, sonst Coinbase (BTC-USD) bzw. Binance (PAXG = Gold). Szenarien-Vergleich nur für das gewählte Instrument.
-const MW_LOG=['BTC','XAU'],mwLastT=a=>MWL.recs.reduce((m,r)=>r.a===a?Math.max(m,r.t0):m,0);
+const MW_LOG=['BTC','XAU'],rsrc=r=>r.src||'K',mwLastT=(a,src)=>MWL.recs.reduce((m,r)=>r.a===a&&rsrc(r)===src?Math.max(m,r.t0):m,0);
+const MW_BN={BTC:'BTCUSDT',ETH:'ETHUSDT',XAU:'PAXGUSDT'};
 async function mwSpot(a){try{if(a==='BTC'){const j=await fetch('https://api.exchange.coinbase.com/products/BTC-USD/ticker',{cache:'no-store'}).then(r=>r.json());return parseFloat(j.price)||null}
  if(a==='XAU'){const j=await fetch('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT',{cache:'no-store'}).then(r=>r.json());return parseFloat(j.price)||null}}catch(e){}return null}
 let mwAllBusy=false;
 async function mwLogAll(){if(mwAllBusy||roOnly())return;mwAllBusy=true;
- try{for(const a of MW_LOG){if(Date.now()-mwLastT(a)<55*60e3)continue;
-   const S=await MW.load(a);if(!S||S.err||!S.pick)continue;
-   const cur=mwAsset()===a,k=cur?mwToUsd():null,spot=cur&&last!=null&&k?last*k:await mwSpot(a);mwLog(a,spot,cur)}}
+ try{for(const a of MW_LOG)for(const src of ['K','P']){if(Date.now()-mwLastT(a,src)<55*60e3)continue;
+   await mwLoad(src,a);const S=MW.S[MWKEY[src](a)];if(!S||S.err||!S.pick)continue;
+   const cur=mwAsset()===a,k=cur?mwToUsd():null,spot=cur&&last!=null&&k?last*k:await mwSpot(a);mwLog(a,spot,cur,src)}}
  catch(e){}finally{mwAllBusy=false}}
-function mwLog(a,spot,cur){const S=a&&MW.S[a];if(roOnly()||!S||S.err||!S.pick||!S.at||Date.now()-S.at>5*60e3)return;
+function mwLog(a,spot,cur,src){src=src||'K';const S=a&&MW.S[MWKEY[src](a)];if(roOnly()||!S||S.err||!S.pick||!S.at||Date.now()-S.at>5*60e3)return;
  if(!(spot>0))return;const now=Date.now();
- if(now-mwLastT(a)<55*60e3)return;
+ if(now-mwLastT(a,src)<55*60e3)return;
  const cm={};(cur?mwCmp(S,spot):[]).forEach(x=>{cm[x.c.id]=cm[x.c.id]||[];cm[x.c.id].push({key:x.key,up:x.upU,dn:x.dnU,mod:[x.L.a,x.L.b,x.L.c],mkt:[x.mu,x.ms,x.md],edge:x.edge})});
  const ev=new Map();S.pick.forEach(e=>ev.set(e.id,e));Object.keys(cm).forEach(id=>{if(!ev.has(id)){const e=S.all.find(x=>x.id===id);if(e)ev.set(id,e)}});
- ev.forEach(e=>{const st=MW.stats(e,spot);MWL.recs.push({a,id:e.id,lab:e.lab||'Vergleich',t0:now,ct:e.ct,h:+e.h.toFixed(2),S0:spot,
-  med:st.m.lt||st.m.gt?null:st.m.v,lo:st.lo.lt||st.lo.gt?null:st.lo.v,hi:st.hi.lt||st.hi.gt?null:st.hi.v,pUp:st.pa?+st.pa.p.toFixed(3):null,cmp:cm[e.id]||null,res:null})});
- if(MWL.recs.length>4000){const keep=MWL.recs.filter(r=>!r.res),done=MWL.recs.filter(r=>r.res).slice(-(4000-keep.length));MWL.recs=[...done,...keep].sort((x,y)=>x.t0-y.t0)}
+ ev.forEach(e=>{const st=MW.stats(e,spot),r={a,id:e.id,lab:e.lab||'Vergleich',t0:now,ct:e.ct,h:+e.h.toFixed(2),S0:spot,
+  med:st.m.lt||st.m.gt?null:st.m.v,lo:st.lo.lt||st.lo.gt?null:st.lo.v,hi:st.hi.lt||st.hi.gt?null:st.hi.v,pUp:st.pa?+st.pa.p.toFixed(3):null,cmp:cm[e.id]||null,res:null};
+  if(src!=='K')r.src=src;MWL.recs.push(r)});
+ if(MWL.recs.length>6000){const keep=MWL.recs.filter(r=>!r.res),done=MWL.recs.filter(r=>r.res).slice(-(6000-keep.length));MWL.recs=[...done,...keep].sort((x,y)=>x.t0-y.t0)}
  mwlSave()}
+async function mwPx(r){if(rsrc(r)==='P'){const sym=MW_BN[r.a];if(!sym)return null;
+  const j=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1m&startTime=${r.ct}&limit=1`,{cache:'no-store'}).then(x=>x.json());
+  return Array.isArray(j)&&j[0]&&Math.abs(j[0][0]-r.ct)<6e4?parseFloat(j[0][4])||null:null}
+ const j=await MW.get('/markets?event_ticker='+encodeURIComponent(r.id)+'&limit=5');let px=null;
+ (j.markets||[]).some(m=>{const v=MW.n(m.expiration_value);if(v!=null&&v>0){px=v;return true}return false});return px}
 async function mwlCheck(){if(mwlBusy||roOnly()||Date.now()-mwlAt<5*60e3)return;mwlAt=Date.now();mwlBusy=true;
  try{const now=Date.now(),open=MWL.recs.filter(r=>!r.res&&r.ct+10*60e3<=now);if(!open.length)return;let ch=0;
-  for(const id of [...new Set(open.map(r=>r.id))].slice(0,12)){let px=null;
-   try{const j=await MW.get('/markets?event_ticker='+encodeURIComponent(id)+'&limit=5');(j.markets||[]).some(m=>{const v=MW.n(m.expiration_value);if(v!=null&&v>0){px=v;return true}return false})}catch(_){continue}
-   open.filter(r=>r.id===id).forEach(r=>{if(px==null){if(now-r.ct>7*864e5){r.res={na:true};ch++}return}
+  const grp=new Map();open.forEach(r=>{const g=rsrc(r)+'|'+r.id+'|'+r.ct;(grp.get(g)||grp.set(g,[]).get(g)).push(r)});
+  for(const R of [...grp.values()].slice(0,15)){let px=null;try{px=await mwPx(R[0])}catch(_){continue}
+   R.forEach(r=>{if(px==null){if(now-r.ct>7*864e5){r.res={na:true};ch++}return}
     const res={px,dir:r.pUp==null||Math.abs(r.pUp-.5)<.02?null:((px>r.S0)===(r.pUp>.5)),in:r.lo!=null&&r.hi!=null?px>=r.lo&&px<=r.hi:null,em:r.med!=null?Math.abs(px-r.med)/r.S0:null,ef:Math.abs(px-r.S0)/r.S0};
     if(r.cmp)res.cmp=r.cmp.map(c=>{const o=px>c.up?0:px<c.dn?2:1,br=v=>v.reduce((s,p,i)=>s+(p/100-(i===o?1:0))**2,0);return{key:c.key,o,bm:br(c.mod),bk:br(c.mkt)}});
     r.res=res;ch++})}
   if(ch)mwlSave()}catch(e){}finally{mwlBusy=false;mwlRender()}}
 function mwlRender(){const tb=$('mwlTb'),tc=$('mwlCmp');if(!tb)return;const a=mwAsset();
  if(!a){tb.innerHTML='<tr><td colspan="5">Für dieses Instrument gibt es kein Protokoll.</td></tr>';tc.innerHTML='';$('mwlInfo').textContent='';return}
- const own=MWL.recs.filter(r=>r.a===a&&r.lab!=='Vergleich'),done=own.filter(r=>r.res&&!r.res.na),labs=MW.BK.map(b=>b[2]).filter(l=>own.some(r=>r.lab===l)),pc=v=>(v*100).toFixed(0)+' %';
- tb.innerHTML=labs.length?labs.map(l=>{const A=done.filter(r=>r.lab===l),n=A.length,op=own.filter(r=>r.lab===l&&!r.res).length;
-  if(!n)return`<tr><td>${l}</td><td>0 <span class="m">(${op} offen)</span></td><td>–</td><td>–</td><td>–</td></tr>`;
+ const all=MWL.recs.filter(r=>r.a===a&&r.lab!=='Vergleich'),pc=v=>(v*100).toFixed(0)+' %',SR=['K','P'].filter(x=>all.some(r=>rsrc(r)===x)),many=SR.length>1;
+ const rowsFor=src=>{const own=all.filter(r=>rsrc(r)===src),done=own.filter(r=>r.res&&!r.res.na),labs=MW.BK.map(b=>b[2]).filter(l=>own.some(r=>r.lab===l));
+  return labs.map(l=>{const A=done.filter(r=>r.lab===l),n=A.length,op=own.filter(r=>r.lab===l&&!r.res).length,nm=(many?MW.SN[src]+' · ':'')+l;
+  if(!n)return`<tr><td>${nm}</td><td>0 <span class="m">(${op} offen)</span></td><td>–</td><td>–</td><td>–</td></tr>`;
   const B=A.filter(r=>r.res.in!=null),hit=B.length?B.filter(r=>r.res.in).length/B.length:null,D=A.filter(r=>r.res.dir!=null),dh=D.length?D.filter(r=>r.res.dir).length/D.length:null,
    M=A.filter(r=>r.res.em!=null),em=M.length?M.reduce((x,r)=>x+r.res.em,0)/M.length:null,ef=M.length?M.reduce((x,r)=>x+r.res.ef,0)/M.length:null;
-  return`<tr><td>${l}</td><td>${n}<br><span class="m">${op} offen</span></td><td class="${hit==null?'':Math.abs(hit-.8)<=.1?'up':'dn'}">${hit==null?'–':pc(hit)}</td><td>${dh==null?'–':pc(dh)+' <span class="m">(n='+D.length+')</span>'}</td><td class="${em==null||Math.abs(em-ef)<1e-4?'':em<ef?'up':'dn'}">${em==null?'–':Math.abs(em-ef)<1e-4?'gleich':em<ef?'besser':'schlechter'}${em==null?'':'<br><span class="m">'+(em*100).toFixed(1).replace('.',',')+' % vs. '+(ef*100).toFixed(1).replace('.',',')+' %</span>'}</td></tr>`}).join('')
-  :'<tr><td colspan="5">Noch nichts gespeichert. Das Dashboard schreibt jede Stunde mit, solange es offen ist (nur auf dem Hauptgerät).</td></tr>';
- const C=MWL.recs.filter(r=>r.a===a&&r.res&&r.res.cmp).flatMap(r=>r.res.cmp),T={'4h':'1–4 Stunden','7d':'1–7 Tage','28d':'1–4 Wochen'};
- tc.innerHTML=Object.keys(T).map(k=>{const X=C.filter(c=>c.key===k),n=X.length;if(!n)return`<tr><td>${T[k]}</td><td>0</td><td>–</td><td>–</td><td>–</td></tr>`;
+  return`<tr><td>${nm}</td><td>${n}<br><span class="m">${op} offen</span></td><td class="${hit==null?'':Math.abs(hit-.8)<=.1?'up':'dn'}">${hit==null?'–':pc(hit)}</td><td>${dh==null?'–':pc(dh)+' <span class="m">(n='+D.length+')</span>'}</td><td class="${em==null||Math.abs(em-ef)<1e-4?'':em<ef?'up':'dn'}">${em==null?'–':Math.abs(em-ef)<1e-4?'gleich':em<ef?'besser':'schlechter'}${em==null?'':'<br><span class="m">'+(em*100).toFixed(1).replace('.',',')+' % vs. '+(ef*100).toFixed(1).replace('.',',')+' %</span>'}</td></tr>`}).join('')};
+ tb.innerHTML=SR.length?SR.map(rowsFor).join(''):'<tr><td colspan="5">Noch nichts gespeichert. Das Dashboard schreibt jede Stunde mit, solange es offen ist (nur auf dem Hauptgerät).</td></tr>';
+ const T={'4h':'1–4 Stunden','7d':'1–7 Tage','28d':'1–4 Wochen'};
+ tc.innerHTML=['K','P'].flatMap(src=>{const C=MWL.recs.filter(r=>r.a===a&&rsrc(r)===src&&r.res&&r.res.cmp).flatMap(r=>r.res.cmp);if(src==='P'&&!C.length&&!many)return[];
+  return Object.keys(T).map(k=>{const X=C.filter(c=>c.key===k),n=X.length,nm=(many||src==='P'?MW.SN[src]+' · ':'')+T[k];if(!n)return`<tr><td>${nm}</td><td>0</td><td>–</td><td>–</td><td>–</td></tr>`;
   const bm=X.reduce((s,c)=>s+c.bm,0)/n,bk=X.reduce((s,c)=>s+c.bk,0)/n,f=v=>v.toFixed(3).replace('.',',');
-  return`<tr><td>${T[k]}</td><td>${n}</td><td>${f(bm)}</td><td>${f(bk)}</td><td>${n<20?'<span class="m">zu wenig</span>':Math.abs(bm-bk)<.01?'gleich':bm<bk?'<b class="up">Szenarien</b>':'<b class="up">Markt</b>'}</td></tr>`}).join('');
- $('mwlInfo').textContent=`${a==='XAU'?'Gold':a}: ${own.length} Schnappschüsse gespeichert, ${done.length} schon gegen den Abrechnungskurs geprüft.`+(done.length<30?' Aussagekräftig wird es erst ab etwa 30 Prüfungen je Zeile.':'')}
+  return`<tr><td>${nm}</td><td>${n}</td><td>${f(bm)}</td><td>${f(bk)}</td><td>${n<20?'<span class="m">zu wenig</span>':Math.abs(bm-bk)<.01?'gleich':bm<bk?'<b class="up">Szenarien</b>':'<b class="up">Markt</b>'}</td></tr>`})}).join('');
+ const dn=all.filter(r=>r.res&&!r.res.na).length;
+ $('mwlInfo').textContent=`${a==='XAU'?'Gold':a}: ${all.length} Schnappschüsse gespeichert (${SR.map(x=>MW.SN[x]+' '+all.filter(r=>rsrc(r)===x).length).join(', ')||'–'}), ${dn} schon gegen den Abrechnungskurs geprüft.`+(dn<30?' Aussagekräftig wird es erst ab etwa 30 Prüfungen je Zeile.':'')}
 setInterval(()=>{try{mwLogAll();mwlCheck();mwlRender()}catch(_){}},60e3);setTimeout(()=>{try{mwLogAll()}catch(_){}},8000);setTimeout(()=>{try{mwlRender()}catch(_){}},2000);
 
 init().then(()=>{syRender();if(SY.tok&&SY.role!=='off')syLoop(true)});setInterval(tick,2000);addEventListener('resize',render);

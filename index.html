@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.12.1 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.13.0 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -127,6 +127,14 @@ label.f{display:block}
   <div id="labSum" style="margin:8px 0"></div>
   <table><thead><tr><th>SIGNAL · HORIZONT</th><th>TREFFER</th><th>UNABH.</th><th>JETZT</th><th>URTEIL</th></tr></thead><tbody id="labTb"></tbody></table>
   <div class="note" style="margin-top:8px"><b>So liest du es:</b> „Treffer" = wie oft die Richtung des Signals stimmte, darunter die Quote eines Zufallssignals mit gleich vielen ↑ und ↓. „Unabh." = Zahl der Signale, deren Zeiträume sich nicht überlappen. „Jetzt" = was das Signal heute sagt (↑ steigt, ↓ fällt, – kein Signal). „✗ Zufall" heißt: nicht verlässlich besser als Zufall. „Zu wenig" heißt: unter 30 unabhängige Fälle. <b>Bestanden</b> heißt: mindestens 30 unabhängige Fälle, deutlich besser als Zufall (t ≥ 2,5, dieselbe strenge Schwelle wie beim Bot) <b>und</b> in der ersten und der zweiten Hälfte des Testzeitraums jeweils besser als Zufall. Weil viele Ideen gleichzeitig getestet werden, kann trotzdem einmal eine nur zufällig bestehen. Bestandene Signale sind ein Hinweis, keine Garantie und keine Anlageberatung.</div>
+</div>
+
+<div class="card" id="fwCard">
+  <div class="row"><div class="m">PAPIER-TEST · MACD-TRENDFOLGE KRYPTO (AB START, OHNE ECHTES GELD)</div><button id="fwReset" style="padding:8px 12px">Neu starten</button></div>
+  <div class="note" style="margin:6px 0">Kandidat aus der Chartwerk-Strategie-Suche (27.11.2026): <b>Tageskerzen · MACD 12/26/9 · Einstieg, wenn die MACD-Linie die Nulllinie kreuzt (darüber Long, darunter Short) · Ausstieg bei der Gegenkreuzung oder Notbremse 2× ATR 14</b>, auf Bitcoin, Ethereum, Solana und Zcash. Hier zählt nur, was <b>nach dem Start</b> passiert – Daten, die die Suche nie gesehen hat. Kosten wie beim Bot (Gebühr 0,05 % + Slippage 0,03 % je Seite). Nur Beobachtung: der Bot handelt damit nicht.</div>
+  <div id="fwSum" style="margin:8px 0"><div class="note">lädt…</div></div>
+  <table><thead><tr><th>MARKT</th><th>JETZT</th><th>SEIT START</th><th>RÜCKBLICK</th></tr></thead><tbody id="fwTb"></tbody></table>
+  <div class="note" id="fwNote" style="margin-top:8px"></div>
 </div>
 
 <div class="card" id="rbCard">
@@ -383,7 +391,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.12.1';
+const VERSION='v3.13.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2812,6 +2820,58 @@ setInterval(()=>{try{mwLogAll();mwlCheck();mwlRender()}catch(_){}},60e3);setTime
  const set=on=>{c.classList.toggle('big',on);document.body.classList.toggle('bigOn',on);b.textContent=on?'✕ Klein':'⛶ Groß';if(lastDrawA)draw(lastDrawA);if(on)c.scrollTop=0;else c.scrollIntoView({block:'start'})};
  b.onclick=()=>set(!c.classList.contains('big'));
  addEventListener('keydown',e=>{if(e.key==='Escape'&&c.classList.contains('big'))set(false)})})();
+// v3.13.0 Papier-Test MACD-Trendfolge (Krypto): gleiche Regeln wie Chartwerk „Tag · MACD Chart · Nulllinie · Gegensignal“.
+// Nur Beobachtung – berührt Bot, Konto und Strategien nicht. Gespeichert wird nur der Startzeitpunkt (btcfwmacd, per Gist synchronisiert).
+// Alles andere wird bei jedem Abruf aus abgeschlossenen Binance-Tageskerzen neu berechnet – das Dashboard muss also nicht ständig offen sein.
+const FW={key:'btcfwmacd',mk:[['BTC','Bitcoin','BTCUSDT'],['ETH','Ethereum','ETHUSDT'],['SOL','Solana','SOLUSDT'],['ZEC','Zcash','ZECUSDT']],
+ cost:2*(FEE+SLIP),edgeN:30,edgeT:2.5,busy:false,at:0};
+function fwStart(){try{const o=JSON.parse(localStorage.getItem(FW.key)||'null');if(o&&o.start)return o.start}catch(e){}return null}
+function fwSetStart(){const d=new Date();const st=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()); // Start = heutige Tageskerze (UTC), erstes neues Signal frühestens heute Nacht
+ localStorage.setItem(FW.key,JSON.stringify({start:st,set:Date.now(),rule:'1d MACD12/26/9 Nulllinie Gegensignal SL2ATR'}));return st}
+function fwEma(a,n){const o=new Array(a.length).fill(null),k=2/(n+1);let e=null,c=0,s=0;
+ for(let i=0;i<a.length;i++){const v=a[i];if(v==null)continue;if(e==null){s+=v;c++;if(c===n){e=s/n;o[i]=e}continue}e=v*k+e*(1-k);o[i]=e}return o}
+function fwAtr(d,n){const o=[],tr=[];d.forEach((b,i)=>{const pc=i?d[i-1].c:b.c;tr.push(Math.max(b.h-b.l,Math.abs(b.h-pc),Math.abs(b.l-pc)));
+ if(i<n-1){o.push(null);return}let s=0;for(let j=i-n+1;j<=i;j++)s+=tr[j];o.push(s/n)});return o}
+// Signale wie Chartwerk msSignals mit Filter „Nulllinie“ und Ausstieg „Gegensignal“ (inkl. Notbremse 2× ATR, geprüft mit Hoch/Tief ab der Folgekerze)
+function fwSignals(d){const cl=d.map(b=>b.c),f=fwEma(cl,12),sl=fwEma(cl,26),m=cl.map((_,i)=>f[i]!=null&&sl[i]!=null?f[i]-sl[i]:null),g=fwEma(m,9),A=fwAtr(d,14),T=[];
+ let cur=null;
+ for(let i=1;i<d.length;i++){if(m[i-1]==null||g[i-1]==null||m[i]==null||g[i]==null)continue;
+  if(cur&&!cur.x){const b=d[i];if(cur.d>0?b.l<=cur.sl:b.h>=cur.sl){cur.x=i;cur.px=cur.sl;cur.why='Stop'}}
+  const raw=m[i-1]<=0&&m[i]>0?1:m[i-1]>=0&&m[i]<0?-1:0;
+  if(cur&&!cur.x&&raw===-cur.d){cur.x=i;cur.px=d[i].c;cur.why='Gegensignal'}
+  if(!raw)continue;if(cur&&!cur.x&&cur.d===raw)continue;
+  const e=d[i].c,at=A[i]||e*.01;cur={i,d:raw,e,sl:e-raw*2*at,x:null};T.push(cur)}
+ T.forEach(q=>{q.r=q.x!=null?q.d*(q.px/q.e-1)-FW.cost:q.d*(d[d.length-1].c/q.e-1)-FW.cost});return T}
+function fwEdge(R){const n=R.length;if(!n)return{n:0};const avg=R.reduce((a,b)=>a+b,0)/n;let v=0;R.forEach(r=>v+=(r-avg)**2);
+ const sd=n>1?Math.sqrt(v/(n-1)):0,t=sd>0?avg/(sd/Math.sqrt(n)):null;return{n,avg,t,hit:R.filter(r=>r>0).length/n,ok:n>=FW.edgeN&&t!=null&&t>=FW.edgeT}}
+async function fwKlines(sym){for(const h of['https://data-api.binance.vision','https://api.binance.com']){
+ try{const r=await fetch(`${h}/api/v3/klines?symbol=${sym}&interval=1d&limit=1000`,{cache:'no-store'});if(!r.ok)continue;const a=await r.json();
+  if(Array.isArray(a)&&a.length)return a.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],ct:k[6]}))}catch(e){}}throw new Error('keine Kurse')}
+async function fwRun(){if(FW.busy)return;FW.busy=true;
+ try{let st=fwStart();if(!st&&!syView())st=fwSetStart();
+  const pc=v=>v==null?'–':(v>0?'+':'')+(v*100).toFixed(1).replace('.',',')+' %',tf=t=>t==null?'–':t.toFixed(1).replace('.',','),
+   dt=t=>new Date(t).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'UTC'}),now=Date.now(),rows=[],FWD=[],BK=[];
+  for(const[id,nm,sym]of FW.mk){
+   try{const all=await fwKlines(sym),d=all.filter(b=>b.ct<now); // nur abgeschlossene Tageskerzen
+    const T=fwSignals(d),cur=T.length&&T[T.length-1].x==null?T[T.length-1]:null,
+     fw=st?T.filter(q=>d[q.i].t>=st):[],fwDone=fw.filter(q=>q.x!=null),bk=T.filter(q=>q.x!=null&&(!st||d[q.i].t<st));
+    FWD.push(...fwDone.map(q=>q.r));BK.push(...bk.map(q=>q.r));
+    const live=all[all.length-1].c,openR=cur?cur.d*(live/cur.e-1):null,
+     nowTxt=cur?`<b class="${cur.d>0?'up':'dn'}">${cur.d>0?'LONG':'SHORT'}</b> seit ${dt(d[cur.i].t)} @ ${cur.e.toLocaleString('de-DE',{maximumFractionDigits:2})}<br><span class="${openR>=0?'up':'dn'}">${pc(openR)}</span> <span class="note">· Stop ${cur.sl.toLocaleString('de-DE',{maximumFractionDigits:2})}${st&&d[cur.i].t<st?' · vor Start eröffnet, zählt nicht':''}</span>`:'<span class="note">keine Position</span>',
+     E=fwEdge(fwDone.map(q=>q.r)),B=fwEdge(bk.map(q=>q.r));
+    rows.push(`<tr><td>${nm}</td><td>${nowTxt}</td><td>${fw.length} Signal${fw.length===1?'':'e'}<br><span class="note">${fwDone.length} abgeschlossen${E.n?' · Ø '+pc(E.avg):''}</span></td><td>${B.n} Trades<br><span class="note">Ø ${pc(B.avg)} · t ${tf(B.t)}</span></td></tr>`)}
+   catch(e){rows.push(`<tr><td>${nm}</td><td colspan="3"><span class="note">Kurse nicht abrufbar</span></td></tr>`)}}
+  $('fwTb').innerHTML=rows.join('');
+  const E=fwEdge(FWD),B=fwEdge(BK),days=st?Math.floor((now-st)/864e5):0;
+  const verdict=!E.n?'<span class="note">noch keine abgeschlossenen Trades</span>':E.n<FW.edgeN?`<span class="note">läuft · ${E.n} von ${FW.edgeN} Trades nötig</span>`:E.ok?'<b class="up">Vorteil bestätigt ✓</b>':'<b class="dn">kein Beleg</b>';
+  $('fwSum').innerHTML=st?`<div style="font-size:15px">Seit <b>${dt(st)}</b> (${days} Tag${days===1?'':'e'}): ${E.n} abgeschlossene Trades · Treffer ${E.n?Math.round(E.hit*100)+' %':'–'} · Ø ${pc(E.avg)} je Trade · t ${tf(E.t)} → ${verdict}</div>`
+   :'<div class="note">Startet beim nächsten Öffnen auf dem Hauptgerät.</div>';
+  $('fwNote').innerHTML=`<b>So liest du es:</b> „Jetzt“ = aktuelle Position nach den Regeln (Stand letzte abgeschlossene Tageskerze, Ergebnis zum Live-Kurs). „Seit Start“ = nur Signale ab dem Startdatum – das ist der eigentliche Test. „Rückblick“ = dieselben Regeln auf den rund 1000 Tagen davor, zum Vergleich (alle vier zusammen: ${B.n} Trades, t ${tf(B.t)}). Urteil wie beim Bot: Vorteil erst bei mind. ${FW.edgeN} abgeschlossenen Trades und t ≥ ${tf(FW.edgeT)}. Bei rund 40 Trades im Jahr (alle vier zusammen) dauert das etwa 8–10 Monate. Viele kleine Verluste und wenige große Gewinne sind bei dieser Strategie normal.`;
+  FW.at=now}
+ finally{FW.busy=false}}
+$('fwReset').onclick=()=>{if(syView()){alert('Nur auf dem Hauptgerät möglich.');return}
+ if(!confirm('Papier-Test neu starten? Alle bisherigen Test-Ergebnisse zählen dann nicht mehr, gezählt wird ab heute.'))return;fwSetStart();fwRun()};
+setTimeout(()=>{fwRun().catch(()=>{})},3000);setInterval(()=>{if(Date.now()-FW.at>15*60e3)fwRun().catch(()=>{})},60e3);
 init().then(()=>{syRender();if(SY.tok&&SY.role!=='off')syLoop(true)});setInterval(tick,2000);addEventListener('resize',render);
 </script>
 </body>

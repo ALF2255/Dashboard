@@ -25,6 +25,7 @@ Live-Dashboard für Bitcoin (und ETH, ZEC, Gold, Silber) mit Chart, Analyse, Zon
 - **Marktwetten** (ab v3.10): Karte mit dem, was Händler auf der US-Prognosebörse Kalshi für Bitcoin, Ethereum und Gold zu festen Terminen einpreisen (nächste Stunde, Tag, Woche, Monat, länger): Mitte, 80 %-Bereich und Chance „höher als jetzt“; dazu ein Vergleich mit den Prozenten der Karte „Szenarien“. Ab v3.10.1 mit Trefferprotokoll: stündliche Schnappschüsse, geprüft mit dem offiziellen Kalshi-Abrechnungskurs. Nur Anzeige, der Bot nutzt es nicht. Falls der Browser den Abruf blockiert, lässt sich eine Umweg-Adresse eintragen
 - **Prognose-Labor** (ab v3.6): testet 26 Signal-Ideen auf Stunden-, Tages- und Monatsebene (Übertreibung, RSI, Trend, Funding, 200-Tage-Linie, Mayer-Multiple, Regenbogen) ohne Blick in die Zukunft; „bestanden“ nur bei t ≥ 2,5, mind. 30 unabhängigen Fällen und Vorteil in beiden Hälften des Testzeitraums
 - Bitcoin-Regenbogen als Langfrist-Bewertung (nur Anzeige)
+- **Papier-Test MACD-Trendfolge Krypto** (ab v3.13): beobachtet ab einem Startdatum den Kandidaten aus der Chartwerk-Strategie-Suche (Tageskerzen, MACD 12/26/9, Einstieg bei Kreuzung der Nulllinie, Ausstieg bei Gegenkreuzung oder Notbremse 2× ATR) auf BTC, ETH, SOL und ZEC – nur Signale nach dem Start zählen. Urteil wie beim Bot (t ≥ 2,5, mind. 30 Trades). Nur Anzeige, der Bot handelt damit nicht
 
 ## Mehrere Geräte (ab v3.4)
 
@@ -43,7 +44,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.12.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.13.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|
@@ -67,3 +68,4 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 ## Testergebnisse bisher (Papier, Nov. 2026)
 
 Fünf Testläufe auf BTC und ZEC: Keine der kursbasierten Strategien zeigte nach Kosten einen belegbaren Vorteil. Die Handelssperre hat jedes Mal korrekt verhindert, dass der Bot ohne Vorteil handelt. v3.3 testet mit der Funding Rate erstmals eine neue Informationsquelle.
+| v3.13.0 | Karte „Papier-Test MACD-Trendfolge Krypto“: Kandidat aus Chartwerk ab Startdatum beobachten (nur Anzeige, Bot unverändert) |

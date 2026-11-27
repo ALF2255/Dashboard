@@ -64,8 +64,8 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.11.0 | Robuste Strategiewahl im Walk-Forward (mind. 15 Trades, Wahl nach t-Wert), abschaltbar |
 | v3.12.0 | Marktwetten und Hoch/Tief-Wetten zusätzlich von **Polymarket** (Auswahl Kalshi / Polymarket / Beide); Protokoll schreibt beide Börsen mit (Polymarket geprüft mit dem Binance-Schlusskurs zum Termin) |
 | v3.12.1 | Kursfenster per Knopf **„⛶ Groß“** bildschirmfüllend (Esc oder „✕ Klein“ schließt) |
+| v3.13.0 | Karte „Papier-Test MACD-Trendfolge Krypto“: Kandidat aus Chartwerk ab Startdatum beobachten (nur Anzeige, Bot unverändert) |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 
 Fünf Testläufe auf BTC und ZEC: Keine der kursbasierten Strategien zeigte nach Kosten einen belegbaren Vorteil. Die Handelssperre hat jedes Mal korrekt verhindert, dass der Bot ohne Vorteil handelt. v3.3 testet mit der Funding Rate erstmals eine neue Informationsquelle.
-| v3.13.0 | Karte „Papier-Test MACD-Trendfolge Krypto“: Kandidat aus Chartwerk ab Startdatum beobachten (nur Anzeige, Bot unverändert) |

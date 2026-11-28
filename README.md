@@ -44,7 +44,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 
 ## Versionen
 
-`index.html` ist immer die aktuelle Version (derzeit **v3.13.0**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
+`index.html` ist immer die aktuelle Version (derzeit **v3.13.1**). Ältere Stände stehen in der Git-Historie dieses Repositorys.
 
 | Version | Neu |
 |---|---|
@@ -65,6 +65,7 @@ Der Token wird nur im jeweiligen Browser gespeichert – nicht in der Datei, nic
 | v3.12.0 | Marktwetten und Hoch/Tief-Wetten zusätzlich von **Polymarket** (Auswahl Kalshi / Polymarket / Beide); Protokoll schreibt beide Börsen mit (Polymarket geprüft mit dem Binance-Schlusskurs zum Termin) |
 | v3.12.1 | Kursfenster per Knopf **„⛶ Groß“** bildschirmfüllend (Esc oder „✕ Klein“ schließt) |
 | v3.13.0 | Karte „Papier-Test MACD-Trendfolge Krypto“: Kandidat aus Chartwerk ab Startdatum beobachten (nur Anzeige, Bot unverändert) |
+| v3.13.1 | Papier-Test: „Gegenprobe“ – dieselben Regeln auf 16 Kryptos außerhalb der Suche (bis 8 Jahre), Urteil gesamt und je Hälfte |
 
 ## Testergebnisse bisher (Papier, Nov. 2026)
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Live Dashboard v3.13.0 · Krypto, Gold, Silber</title>
+<title>Live Dashboard v3.13.1 · Krypto, Gold, Silber</title>
 <style>
 :root{--bg:#eef1f6;--card:#fff;--ink:#141824;--mute:#7d8596;--line:#e3e7ee;--up:#1f7a4d;--dn:#b3382c;--acc:#2f6fd6;--bb:#b07d2a;--ew:#8a3fb0}
 #printArea{display:none}@media print{html,body{background:#fff!important}body>*:not(#printArea){display:none!important}#printArea{display:block;font:11px/1.4 system-ui,sans-serif}#printArea,#printArea *{color:#000!important;background:#fff!important}#printArea table{width:100%;border-collapse:collapse;margin:6px 0}#printArea th,#printArea td{border:1px solid #888;padding:3px 5px;text-align:left;vertical-align:top}#printArea tr{page-break-inside:avoid}#printArea h1{font-size:18px;margin:0 0 4px}#printArea h2{font-size:13px;margin:14px 0 4px}}
@@ -135,6 +135,9 @@ label.f{display:block}
   <div id="fwSum" style="margin:8px 0"><div class="note">lädt…</div></div>
   <table><thead><tr><th>MARKT</th><th>JETZT</th><th>SEIT START</th><th>RÜCKBLICK</th></tr></thead><tbody id="fwTb"></tbody></table>
   <div class="note" id="fwNote" style="margin-top:8px"></div>
+  <div class="row" style="margin-top:12px"><div class="m">GEGENPROBE · DIESELBEN REGELN AUF KRYPTOS, DIE DIE SUCHE NIE GESEHEN HAT</div><button id="fwOos" style="padding:8px 12px">Gegenprobe starten</button></div>
+  <div class="note" style="margin:6px 0">Statt 8–10 Monate zu warten: unveränderte Regeln auf 16 anderen Kryptos (bis 8 Jahre Tageskerzen). Für diese Märkte ist der Rückblick echtes Neuland, weil die Strategie nur mit BTC, ETH, SOL und ZEC gefunden wurde. Kostenlos (öffentliche Binance-Daten), dauert etwa 20 Sekunden.</div>
+  <div id="fwOosBox"></div>
 </div>
 
 <div class="card" id="rbCard">
@@ -391,7 +394,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.13.0';
+const VERSION='v3.13.1';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2869,6 +2872,30 @@ async function fwRun(){if(FW.busy)return;FW.busy=true;
   $('fwNote').innerHTML=`<b>So liest du es:</b> „Jetzt“ = aktuelle Position nach den Regeln (Stand letzte abgeschlossene Tageskerze, Ergebnis zum Live-Kurs). „Seit Start“ = nur Signale ab dem Startdatum – das ist der eigentliche Test. „Rückblick“ = dieselben Regeln auf den rund 1000 Tagen davor, zum Vergleich (alle vier zusammen: ${B.n} Trades, t ${tf(B.t)}). Urteil wie beim Bot: Vorteil erst bei mind. ${FW.edgeN} abgeschlossenen Trades und t ≥ ${tf(FW.edgeT)}. Bei rund 40 Trades im Jahr (alle vier zusammen) dauert das etwa 8–10 Monate. Viele kleine Verluste und wenige große Gewinne sind bei dieser Strategie normal.`;
   FW.at=now}
  finally{FW.busy=false}}
+// Gegenprobe (v3.13.1): gleiche Regeln auf Märkten außerhalb der Suche – Ergebnis sofort statt nach Monaten.
+// Vorbehalt: heute gelistete Coins sind „Überlebende“; deshalb zusätzlich je Hälfte und je Markt anzeigen.
+FW.oos=['XRPUSDT','DOGEUSDT','BNBUSDT','ADAUSDT','TRXUSDT','LINKUSDT','LTCUSDT','BCHUSDT','XLMUSDT','DOTUSDT','AVAXUSDT','ATOMUSDT','ETCUSDT','UNIUSDT','NEARUSDT','FILUSDT'];
+async function fwKlinesLong(sym,pages){let all=[],end=null;for(let p=0;p<pages;p++){let a=null;
+  for(const h of['https://data-api.binance.vision','https://api.binance.com']){try{const r=await fetch(`${h}/api/v3/klines?symbol=${sym}&interval=1d&limit=1000${end?'&endTime='+end:''}`,{cache:'no-store'});if(r.ok){a=await r.json();break}}catch(e){}}
+  if(!Array.isArray(a)||!a.length)break;all=a.concat(all);if(a.length<1000)break;end=a[0][0]-1}
+ return all.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],ct:k[6]}))}
+async function fwOos(){const box=$('fwOosBox'),btn=$('fwOos');if(btn.disabled)return;btn.disabled=true;
+ const pc=v=>v==null?'–':(v>0?'+':'')+(v*100).toFixed(1).replace('.',',')+' %',tf=t=>t==null?'–':t.toFixed(1).replace('.',','),
+  tc=E=>!E.n?'–':`<span class="${E.n>=FW.edgeN&&E.t>=FW.edgeT?'up':E.t<0?'dn':''}">${tf(E.t)}</span>`,now=Date.now(),rows=[],ALL=[],H1=[],H2=[];
+ try{for(let k=0;k<FW.oos.length;k++){const sym=FW.oos[k];box.innerHTML=`<div class="note">Lade ${sym.replace('USDT','')} … ${k+1} von ${FW.oos.length}</div>`;
+   try{const d=(await fwKlinesLong(sym,3)).filter(b=>b.ct<now);if(d.length<200){rows.push([sym,null]);continue}
+    const T=fwSignals(d).filter(q=>q.x!=null),mid=Math.floor(d.length/2),R=T.map(q=>q.r);
+    ALL.push(...R);H1.push(...T.filter(q=>q.x<mid).map(q=>q.r));H2.push(...T.filter(q=>q.x>=mid).map(q=>q.r));
+    rows.push([sym,fwEdge(R),fwEdge(T.filter(q=>q.x<mid).map(q=>q.r)),fwEdge(T.filter(q=>q.x>=mid).map(q=>q.r)),d.length])}
+   catch(e){rows.push([sym,null])}}
+  const E=fwEdge(ALL),A=fwEdge(H1),B=fwEdge(H2),pos=rows.filter(r=>r[1]&&r[1].n&&r[1].avg>0).length,cnt=rows.filter(r=>r[1]&&r[1].n).length;
+  const ok=E.ok&&A.ok&&B.ok,verdict=ok?'<b class="up">Gegenprobe bestanden ✓</b> – Vorteil auch auf fremden Märkten und in beiden Hälften':E.ok?'<b style="color:#c9a227">nur gesamt ✓</b> – in einer Hälfte nicht bestätigt':E.n<FW.edgeN?'<span class="note">zu wenige Trades</span>':'<b class="dn">nicht bestanden</b> – auf fremden Märkten kein belegter Vorteil';
+  box.innerHTML=`<div style="font-size:15px;margin:6px 0">${cnt} Märkte · ${E.n} Trades · Treffer ${E.n?Math.round(E.hit*100)+' %':'–'} · Ø ${pc(E.avg)} je Trade · t ${tf(E.t)} (1. Hälfte ${tf(A.t)} · 2. Hälfte ${tf(B.t)}) → ${verdict}</div>
+   <div class="note" style="margin-bottom:6px">${pos} von ${cnt} Märkten mit positivem Ø nach Kosten.</div>
+   <table><thead><tr><th>MARKT</th><th>TRADES</th><th>Ø JE TRADE</th><th>t</th><th>1. | 2. HÄLFTE</th><th>TAGE</th></tr></thead><tbody>${rows.map(r=>r[1]?`<tr><td>${r[0].replace('USDT','')}</td><td>${r[1].n}</td><td class="${r[1].avg>=0?'up':'dn'}">${pc(r[1].avg)}</td><td>${tc(r[1])}</td><td>${tc(r[2])} | ${tc(r[3])}</td><td>${r[4]}</td></tr>`:`<tr><td>${r[0].replace('USDT','')}</td><td colspan="5"><span class="note">keine Daten</span></td></tr>`).join('')}</tbody></table>
+   <div class="note" style="margin-top:6px">Gleiche Regeln und Kosten wie oben, nichts angepasst. Urteil wie beim Bot (t ≥ 2,5, mind. 30 Trades), „bestanden“ nur wenn gesamt <b>und</b> beide Hälften. Vorbehalt: Nur Coins, die es heute noch gibt („Überlebende“) – das schönt Rückblicke etwas. Der laufende Papier-Test oben bleibt der strengste Test.</div>`}
+ finally{btn.disabled=false}}
+$('fwOos').onclick=()=>fwOos().catch(()=>{});
 $('fwReset').onclick=()=>{if(syView()){alert('Nur auf dem Hauptgerät möglich.');return}
  if(!confirm('Papier-Test neu starten? Alle bisherigen Test-Ergebnisse zählen dann nicht mehr, gezählt wird ab heute.'))return;fwSetStart();fwRun()};
 setTimeout(()=>{fwRun().catch(()=>{})},3000);setInterval(()=>{if(Date.now()-FW.at>15*60e3)fwRun().catch(()=>{})},60e3);

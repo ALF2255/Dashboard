@@ -140,6 +140,12 @@ label.f{display:block}
   <div id="fwOosBox"></div>
 </div>
 
+<div class="card" id="fbCard">
+  <div class="m">FIB-METHODE (EIGENE STRATEGIE) · BITCOIN WOCHE · NUR ANZEIGE</div>
+  <div class="note" style="margin:6px 0">Deine eigene Fib-Methode, wie in Chartwerk als „★ Fib (eigene)“ eingestellt: <b>Woche · Fibs vom Zickzack · Fib-Größe Zyklus · Stopp-Linie 1,236 · 3 Wochenschlüsse</b>. Fib vom Hoch zum ersten großen Tief danach. <b>Fallen:</b> Verkauf beim Abverkauf unter die 0,5, bei gescheiterter erster Erholung unter der 0,5 oder Bruch der 1,236. <b>Steigen:</b> Kauf, wenn der Kurs nach einem Rutsch unter das erste Tief wieder darüber schließt (Boden) oder 4 Wochen über der 0,65 schließt (bestätigt). Gerechnet nur mit abgeschlossenen Wochenkerzen. Nur Anzeige für eigene Spot-Käufe – der Bot handelt damit nicht.</div>
+  <div id="fbBox"><div class="note">lädt…</div></div>
+</div>
+
 <div class="card" id="rbCard">
   <div class="m">BITCOIN-REGENBOGEN · LANGFRIST-BEWERTUNG (NUR ANZEIGE)</div>
   <canvas id="rbCv"></canvas>
@@ -394,7 +400,7 @@ label.f{display:block}
 <div id="printArea"></div>
 <script>
 const $=id=>document.getElementById(id);
-const VERSION='v3.13.1';
+const VERSION='v3.14.0';
 let pair='BTC-USD',tf='1m',candles=[],last=null,open24=null,btCache={},loadedAt=0;
 const INSTR={
  'BTC-USD':{unit:'BTC',kind:'crypto'},
@@ -2899,6 +2905,56 @@ $('fwOos').onclick=()=>fwOos().catch(()=>{});
 $('fwReset').onclick=()=>{if(syView()){alert('Nur auf dem Hauptgerät möglich.');return}
  if(!confirm('Papier-Test neu starten? Alle bisherigen Test-Ergebnisse zählen dann nicht mehr, gezählt wird ab heute.'))return;fwSetStart();fwRun()};
 setTimeout(()=>{fwRun().catch(()=>{})},3000);setInterval(()=>{if(Date.now()-FW.at>15*60e3)fwRun().catch(()=>{})},60e3);
+
+// ===== Fib-Methode des Nutzers (aus Chartwerk, Einstellung Woche · Zickzack · Zyklus · 1,236 · 3 Wochen) – nur Anzeige =====
+const FB={at:0,busy:false,FEE:0.001};
+async function fbKlinesW(){for(const h of['https://data-api.binance.vision','https://api.binance.com']){
+ try{const r=await fetch(`${h}/api/v3/klines?symbol=BTCUSDT&interval=1w&limit=1000`,{cache:'no-store'});if(!r.ok)continue;const a=await r.json();
+  if(Array.isArray(a)&&a.length)return a.map(k=>({t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],ct:k[6]}))}catch(e){}}throw new Error('keine Kurse')}
+// gleiche Logik wie Chartwerk fibSig() mit Wochenkerzen (bpw = 1)
+function fbSig(d){const n=d.length,cl=d.map(b=>b.c),W=104,nW=26,hold=4,need=3,s1=[0],s2=[0];
+ for(let i=1;i<n;i++){const r=Math.log(cl[i]/cl[i-1]);s1[i]=s1[i-1]+r;s2[i]=s2[i-1]+r*r}
+ const Dof=i=>{const a=Math.max(1,i-W+1),m=i-a+1;if(m<8)return .45;const mu=(s1[i]-s1[a-1])/m,v=Math.max(0,(s2[i]-s2[a-1])/m-mu*mu);return Math.min(.45,Math.max(.12,3.5*Math.sqrt(v)))};
+ const buy=new Array(n).fill(null),sell=new Array(n).fill(null),F=[];
+ const step=(f,st,i)=>{const b=d[i],c=cl[i];st.RH=Math.max(st.RH,b.h);
+  st.xb=c<f.x?(st.xb||0)+1:0;st.mb=st.a5&&c<f.m?(st.mb||0)+1:0;
+  if(st.xb>=need)sell[i]='1,236 3× gebrochen';
+  else if(st.mb>=need){sell[i]='Abverkauf unter 0,5';st.a5=false;st.mb=0}
+  else if(!st.below&&!st.a5&&st.RH<f.m&&c<=st.RH*(1-f.D/2))sell[i]='Erholung unter 0,5 gescheitert';
+  if(c>f.m)st.a5=true;
+  if(c<f.L)st.below=true;else if(st.below&&c>=f.L&&cl[i-1]<f.L)buy[i]='Boden';
+  if(c>f.k){if(++st.up>=hold){buy[i]=buy[i]||'bestätigt';if(!st.conf){st.conf=true;return true}}}else st.up=0;return false};
+ let ph=0,H=-Infinity,hi=0,L=Infinity,li=0,f=null,fs=null;
+ for(let i=1;i<n;i++){const b=d[i],c=cl[i];
+  if(ph===0){if(b.h>H){H=b.h;hi=i}if(c<=H*(1-Dof(i))){ph=1;L=b.l;li=i}}
+  else if(ph===1){if(b.l<L){L=b.l;li=i}const D=Dof(i);
+   if(c>=L*(1+Math.max(D,.15))){if(f)f.end=i;f={H,hi,L,li,i0:i,k:L+.65*(H-L),m:L+.5*(H-L),x:H-1.236*(H-L),D,end:null};F.push(f);ph=2;fs={RH:b.h,below:false,up:0};continue}}
+  else if(step(f,fs,i)){ph=0;H=b.h;hi=i;continue}
+  if(f&&ph!==2)step(f,fs,i)}
+ return{buy,sell,F,nW,fs}}
+function fbTrades(d,S){const T=[];let cur=null;for(let i=S.nW;i<d.length;i++){
+  if(cur){if(S.sell[i]){cur.x=i;cur.why=S.sell[i];cur.r=d[i].c/cur.e-1-2*FB.FEE;cur=null}}
+  else if(S.buy[i]){cur={i,e:d[i].c,lb:S.buy[i],x:null};T.push(cur)}}return T}
+async function fbRun(){if(FB.busy)return;FB.busy=true;const box=$('fbBox');
+ try{const all=await fbKlinesW(),now=Date.now(),d=all.filter(k=>k.ct<now),last=all[all.length-1].c;
+  if(d.length<60)throw new Error('zu wenig Kurse');
+  const S=fbSig(d),T=fbTrades(d,S),f=S.F[S.F.length-1],u=v=>'$'+Math.round(v).toLocaleString('de-DE'),
+   dt=t=>new Date(t).toLocaleDateString('de-DE',{day:'numeric',month:'numeric',year:'2-digit'}),
+   pc=v=>(v>=0?'+':'')+Math.round(v*100).toLocaleString('de-DE')+' %',open=T.length&&T[T.length-1].x==null?T[T.length-1]:null;
+  let eq=1;T.forEach(q=>{eq*=1+(q.x!=null?q.r:last/q.e-1-2*FB.FEE)});const hold=last/d[S.nW].c-1;
+  let st=open?`<b class="up">investiert</b> seit ${dt(d[open.i].t)} bei ${u(open.e)} (${open.lb}) · jetzt <b class="${last>=open.e?'up':'dn'}">${pc(last/open.e-1)}</b>`:'<b>wartet auf Kauf</b> (nicht investiert)';
+  let nx='';if(f){nx=open?`Verkauf bei 3 Wochenschlüssen unter <b>${u(f.x)}</b> (1,236)`+(S.fs&&S.fs.a5?` oder 3 Wochenschlüssen zurück unter <b>${u(f.m)}</b> (0,5)`:'')+`. Bestätigung über <b>${u(f.k)}</b> (0,65 ↑).`
+   :`Kauf bei Wochenschluss zurück über <b>${u(f.L)}</b> (erstes Tief), nachdem der Kurs darunter war`+(S.fs&&S.fs.below?' – das ist passiert':'')+`, oder nach 4 Wochenschlüssen über <b>${u(f.k)}</b> (0,65 ↑).`}
+  const lv=f?`<table style="margin-top:8px"><thead><tr><th>AKTUELLER FIB</th><th>MARKE</th><th>ABSTAND</th></tr></thead><tbody>`+
+   [['Fib 0 (Hoch)',f.H],['0,65 ↑ Bestätigung',f.k],['0,5 Abverkauf',f.m],['Fib 1 (erstes Tief)',f.L],['1,236 Stopp',f.x]].map(([a,v])=>`<tr><td>${a}</td><td>${u(v)}</td><td class="${last>=v?'up':'dn'}">${pc(v/last-1)}</td></tr>`).join('')+`</tbody></table>`:'';
+  const tb=`<table style="margin-top:8px"><thead><tr><th>KAUF</th><th>VERKAUF</th><th>ERGEBNIS</th></tr></thead><tbody>`+
+   T.map(q=>`<tr><td>${dt(d[q.i].t)} · ${u(q.e)} <span class="note">${q.lb}</span></td><td>${q.x!=null?dt(d[q.x].t)+' · '+u(d[q.x].c)+' <span class="note">'+q.why+'</span>':'offen'}</td><td class="${(q.x!=null?q.r:last/q.e-1)>=0?'up':'dn'}">${pc(q.x!=null?q.r:last/q.e-1)}${q.x==null?' (offen)':''}</td></tr>`).join('')+`</tbody></table>`;
+  box.innerHTML=`<div>BTC ${u(last)} · ${st}</div>`+(nx?`<div class="note" style="margin-top:4px">${nx}</div>`:'')+lv+tb+
+   `<div class="note" style="margin-top:8px">Rückblick ab ${dt(d[S.nW].t)}: Strategie <b class="${eq-1>=hold?'up':'dn'}">${pc(eq-1)}</b> gegen Halten ${pc(hold)}, 0,1 % Gebühr je Kauf und Verkauf. Nur ${T.filter(q=>q.x!=null).length} abgeschlossene Trades – Orientierung, kein Beleg. Kurse: Binance BTCUSDT Wochenkerzen, aktualisiert stündlich.</div>`;
+  FB.at=Date.now()}
+ catch(e){box.innerHTML=`<div class="note">Fib-Methode: Kurse gerade nicht erreichbar (${e.message}).</div>`}
+ finally{FB.busy=false}}
+setTimeout(()=>{fbRun().catch(()=>{})},4000);setInterval(()=>{if(Date.now()-FB.at>60*60e3)fbRun().catch(()=>{})},5*60e3);
 init().then(()=>{syRender();if(SY.tok&&SY.role!=='off')syLoop(true)});setInterval(tick,2000);addEventListener('resize',render);
 </script>
 </body>
